@@ -1,0 +1,120 @@
+<section>
+    <div class="mainDiv">
+        <div class="banner_content">
+            <div class="whiteTitle">{{headerTitle}}</div>
+            <div class="subMenu_content">
+                <app-sub-menu></app-sub-menu>
+            </div>
+        </div>
+        <div class="subContent">
+            <div class="dropDownList">
+                <form action="" [formGroup]="searchForm">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <select name="" id="" class="form-control  dropdown-toggle" formControlName="country"
+                                    (change)="selectCountry($any($event.target).value)">
+
+                                    <option value="{{country.Country_Id}}" *ngFor="let country of countryList">
+                                        {{country.Country_Name}}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3 res_input">
+                            <div class="form-group">
+                                <select name="" id="" class="form-control  dropdown-toggle" formControlName="state"
+                                    (change)="selectState($any($event.target).value)">
+                                    <option value="">State/District</option>
+                                    <option value="{{state.State_Id}}" *ngFor="let state of stateList">
+                                        {{state.State_Name}}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3 res_input">
+                            <div class="form-group">
+                                <select name="" id="" class="form-control  dropdown-toggle" formControlName="city"
+                                    (change)="selectCity($any($event.target).value)">
+                                    <option value="">Select City</option>
+                                    <option value="{{city.City_Id}}" *ngFor="let city of cityList">{{city.City_Name}}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3 res_input">
+                            <div class="form-group">
+                                <select name="" id="" class="form-control  dropdown-toggle" formControlName="location"
+                                    (change)="selectLocation($any($event.target).value)">
+                                    <option value="">Location</option>
+                                    <option value="{{location.Franchisee_Code}}"
+                                        *ngFor="let location of franchiseeList">{{location.Franchisee_Name}}</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="card_content mt-5" *ngFor="let a of centerList">
+                <div class="card_title">{{a.Franchisee_Name}}</div>
+                <div class="location_content">
+                    <div class="locationIcon mt-3">
+                        <img srcset="../../../assets/img/location.png" loading="lazy" alt="" class="location_img">
+                        <p>{{a.Address1}}</p>
+                         <p>{{a.Address2}}</p>
+                          <p>{{a.Place}}</p>
+                    </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="three_icon mt-3 phone_wp">
+                              <div class="d-flex wp_icon">
+                                <a  target="_blank"  href="https://wa.me/{{a.Mobile_No}}?text=I'm%20interested%20in%20your%20Kidzee centre%20for%20admission" *ngIf="a.Mobile_No!=''"><img src="../../../assets/img/WhatsApp Icon.png"
+                                        class="iconList" loading="lazy" alt=""><span>{{a.Mobile_No}}</span></a>
+                                        </div>
+                                        <div class="d-flex">
+                                <a href="tel:{{a.Mobile_No}}" *ngIf="a.Mobile_No!=''"><img src="../../../assets/img/Call Icon.png"
+                                        class="iconList mx-3" loading="lazy" alt="">{{a.Mobile_No}}</a>
+                                        </div>
+                                <!-- <a href=""><img src="../../../assets/img/Website Icon.png" class="iconList"
+                                        loading="lazy" alt=""></a> -->
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <a href="https://www.google.com/maps/search/?api=1&query={{a.Latitude}},{{a.Longitude}}"
+                                target="_blank"><button class="btn map_btn mt-3">Map Direction</button></a>
+                            <button *ngIf="a.viewurl360!=''" class="btn map_btn mt-3" data-bs-toggle="modal" data-bs-target="#staticBackdrop"
+                                (click)="openVirtualUrl(a.virtualurl)">Virtual Tour</button>
+                            <button class="btn map_btn mt-3" routerLink="/admissions">Admission Open</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+        <div class="showMore_content text-center mt-5">
+            <label for="" class="count_label">Showing {{tindex}} records of {{this.totalrecord}}</label>
+            <a class="showMore_btn" *ngIf="more" (click)="setcentrelistclick()">Show More</a>
+        </div>
+    </div>
+    <div class="monkey_img_content">
+        <img srcset="../../../../assets/img/monkeyWhithLight.png" loading="lazy" alt="" class="studying_monkey">
+    </div>
+</section>
+<ngx-spinner type="ball-scale-multiple"></ngx-spinner>
+
+<!-- Modal -->
+<div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+    aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="">
+                <div class="img_src">
+                    <iframe width="100%" height="500px" style="border:0" loading="lazy" allowfullscreen
+                        referrerpolicy="no-referrer-when-downgrade" [src]="virtual_url">
+                    </iframe>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

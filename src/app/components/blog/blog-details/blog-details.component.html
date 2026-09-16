@@ -1,0 +1,51 @@
+<!-- <app-common-header></app-common-header> -->
+<section>
+  <div class="mainDiv">
+        <!-- <div class="banner_content">
+            <div class="whiteTitle">Blog</div>
+            <div class="subMenu_content">
+                <app-sub-menu></app-sub-menu>
+            </div>
+        </div> -->
+        <div>
+
+    </div>
+
+  <div class="blog_details_content">
+           <div class="search_content">
+            <div class="form-group">
+
+                <input type="text"  #searchInput  (keyup)="onChange(searchInput.value)"   class="form-control search_input" placeholder="search">  <img srcset="../../../../assets/img/search.png" class="search_icon" loading="lazy" alt="">
+
+            </div>
+        </div>
+
+            <div class="preSchoolContent mt-5">
+                 <div class="row" *ngFor="let item of filteredblogList ;let i=index">
+                    <div class="col-md-6 mt-5">
+                        <div class="img_content">
+                            <img src={{item?.files[0]?.url}} loading="lazy" width="394px" height="244px" class="img" alt={{item?.files[0]?.filename}}>
+                        </div>
+                    </div>
+                    <div class="col-md-6  mt-5">
+                        <div class="text_content" routerLink="/blog/{{item.slug}}">
+                            <div class="sub_title text-left w-100">{{item.Title}}</div>
+                            <div class="text_para mt-3">
+                                <p>{{item.Short}}</p>
+                               </div>
+                                <a class="" role="button" href="/blog/{{item.slug}}"><button class="btn readMoreBtn">Read More</button></a>
+                        </div>
+                    </div>
+                 </div>
+            </div>
+
+        </div>
+
+    </div>
+    <!-- <div class="monkey_img_content">
+        <img srcset="../../../../assets/img/standingMonkey.png" alt="" loading="lazy" class="studying_monkey">
+    </div> -->
+
+
+        </section>
+<!-- <app-footer></app-footer> -->

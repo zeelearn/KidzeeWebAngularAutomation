@@ -1,0 +1,131 @@
+.mainDiv {
+    background-color: #EBE1FF;
+    padding: 0px 0px 45px;
+}
+
+.banner_content {
+    background-image: url('../../../assets/img/banner/Banner6.png');
+    position: relative;
+    width: 100%;
+    min-height: 350px;
+    padding: 20px;
+    box-sizing: border-box;
+    background-repeat: no-repeat;
+    background-blend-mode: screen;
+    display: grid;
+    place-content: center;
+}
+
+.subMenu_content {
+    position: absolute;
+    top: 11rem;
+    left: 4rem;
+}
+
+.programTitle {
+    color: #0E2C53;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
+    text-transform: capitalize;
+}
+
+.infoContent {
+    width: 50%;
+    display: flex;
+}
+
+.text1 {
+    border-right: 2px solid #90228D;
+    width: 75%;
+    color: #90228D;
+    font-size: 13px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
+    text-transform: capitalize;
+}
+
+.text2 {
+    width: 100%;
+    color: #90228D;
+    font-size: 13px;
+    font-style: normal;
+    padding-left: 40px;
+    font-weight: 600;
+    line-height: normal;
+    text-transform: capitalize;
+}
+
+.paraText {
+    color: #282828;
+    font-size: 15px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 28px;
+    padding: 0px 60px 0px 0px;
+}
+.listTitle{
+color: #282828;
+font-size: 18px;
+font-style: normal;
+font-weight: 700;
+line-height: normal
+}
+ul{
+    padding: 0;
+}
+.contentList{
+    margin: 65px 90px;
+}
+.text_content{
+    padding: 0px 30px;
+}
+.monkeyImgList{
+    width: 13rem;
+    height: 14rem;
+    margin: 0rem 0rem 0rem 12rem;
+}
+.bottomMonkey{
+    background-color: #EBE1FF;
+}
+.bottomMonkey{
+    display: block;
+       }
+       
+@media screen and (max-width: 600px) {
+    .bottomMonkey{
+ display: none;
+    }
+    .contentList{
+        margin: 65px 20px;
+    }
+    .infoContent {
+        width: 100%;
+        display: flex;
+    }
+
+    .banner_content {
+        background-size: 100% 100%;
+        min-height:200px;
+    }
+
+    .subMenu_content {
+        position: absolute;
+        top: 4rem;
+        left: 0rem;
+    }
+
+    .paraText {
+        padding: 20px;
+    }
+
+    .infoContent {
+        text-align: center;
+    }
+
+    .text1 {
+        width: 100%;
+    }
+}

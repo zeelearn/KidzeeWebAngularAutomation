@@ -1,0 +1,277 @@
+<section>
+    <div class="mainDiv">
+        <div class="banner_content">
+            <div class="subMenu_content">
+                <app-sub-menu></app-sub-menu>
+            </div>
+            <div class="form_content">
+                <div class="row">
+
+                    <div class="col-md-6">
+                        <form action="" [formGroup]="admissionForm">
+                        <div class="form">
+                            <div class="form_title">Enquire Now</div>
+                            <div class="form-group mt-3">
+                                <input type="text" class="form-control" placeholder="First Name*" formControlName="fname"
+                                [ngClass]="{ 'is-invalid': submitted && f.fname.errors }">
+                                <div *ngIf="submitted && f.fname.errors" class="invalid-feedback">
+                                    <span class="text-danger msg_txt" *ngIf="(f.fname.touched || submitted) && f.fname.errors?.required">
+                                       First name is required
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="form-group mt-3">
+                                <input type="text" class="form-control" placeholder="Last Name*"formControlName="lname"
+                                [ngClass]="{ 'is-invalid': submitted && f.lname.errors }">
+                                <div *ngIf="submitted && f.lname.errors" class="invalid-feedback">
+                                    <span class="text-danger msg_txt" *ngIf="(f.lname.touched || submitted) && f.lname.errors?.required">
+                                       Last name is required
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="form-group mt-3">
+                                <input type="text" class="form-control" placeholder="Email*"formControlName="email"
+                                [ngClass]="{ 'is-invalid': submitted && f.email.errors }">
+                                <div *ngIf="submitted && f.email.errors" class="invalid-feedback">
+                                    <span class="text-danger msg_txt" *ngIf="(f.email.touched || submitted) && f.email.errors?.required">
+                                        Email is required
+                                    </span>
+                                    <span class="text-danger msg_txt" *ngIf="f.email.touched && f.email.errors?.email">
+                                        Enter a valid email address
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="form-group mt-3">
+                                <input type="text" class="form-control" placeholder="Mobile*"(keyup)="getMobileNO();" formControlName="mobile"
+                                [ngClass]="{ 'is-invalid': submitted && f.mobile.errors }" >
+                                <div *ngIf="submitted && f.mobile.errors" class="invalid-feedback">
+                                    <span *ngIf="f.mobile.errors?.required">Mobile is required.</span>
+                                    <span *ngIf="f.mobile.errors?.pattern">Please, Enter 10 digit Mobile.</span>
+                                </div>
+                                <div *ngIf="otpInput" class="validMsg">OTP sent successfully</div>
+                            </div>
+                            <div class="form-group mt-3"  *ngIf="otpInput">
+                                <input type="text" class="form-control" placeholder="Enter otp*" (keyup)="verifyOTP();" formControlName="otp"
+                                [ngClass]="{ 'is-invalid': submitted && f.otp.errors }" >
+                                <div *ngIf="submitted && f.otp.errors" class="invalid-feedback">
+                                    <span *ngIf="f.otp.errors?.required">OTP is required.</span>
+                                </div>
+                                <div *ngIf="otp_ValidMsg" class="validMsg">otp verified successfully</div>
+                                <div *ngIf="otp_inValidMsg" class="inValidMsg">please enter valid otp</div>
+                            </div>
+                            <div class="form-group mt-3">
+                                <input type="text" class="form-control" placeholder="Pin Code*"  formControlName="pinCode"
+                                [ngClass]="{ 'is-invalid': submitted && f.pinCode.errors }">
+                                <div *ngIf="submitted && f.pinCode.errors" class="invalid-feedback">
+                                    <span *ngIf="f.pinCode.errors?.required">Pin code is required.</span>
+                                    <span *ngIf="f.pinCode.errors?.pattern">Please, Enter 6 digit pincode.</span>
+                                </div>
+                            </div>
+                            <div class="form-group mt-3" >
+                                <select name="" id="" class="form-control"  formControlName="state" (change)="selectState($event)"
+                                [ngClass]="{ 'is-invalid': submitted && f.state.errors }">
+                                    <option value="">State/District</option>
+                                    <option value="{{state.State_Name}}" *ngFor="let state of stateList">{{state.State_Name}}</option>
+                                </select>
+                                <div *ngIf="submitted && f.state.errors" class="invalid-feedback">
+                                    <span class="text-danger msg_txt" *ngIf="(f.state.touched || submitted) && f.state.errors?.required">
+                                        State/District is required
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="form-group mt-3">
+                                <select name="" id="" class="form-control" formControlName="city" (change)="selectCity($event)"
+                                [ngClass]="{ 'is-invalid': submitted && f.city.errors }">
+                                    <option value="">City</option>
+                                    <option value="{{city.City_Name}}" *ngFor="let city of cityList">{{city.City_Name}}</option>
+                                </select>
+                                <div *ngIf="submitted && f.city.errors" class="invalid-feedback">
+                                    <span class="text-danger msg_txt" *ngIf="(f.city.touched || submitted) && f.city.errors?.required">
+                                        City is required
+                                    </span>
+                                </div>
+                            </div>
+                            <!-- <div class="form-group mt-3">
+                                <select name="" id="" class="form-control" formControlName="location"
+                                [ngClass]="{ 'is-invalid': submitted && f.location.errors }" >
+                                    <option value="">Location</option>
+                                    <option value="{{franchise.Franchisee_Code}}" *ngFor="let franchise of franchiseeList">{{franchise.Franchisee_Code}}</option>
+                                </select>
+                                <div *ngIf="submitted && f.location.errors" class="invalid-feedback">
+                                    <span class="text-danger msg_txt" *ngIf="(f.location.touched || submitted) && f.location.errors?.required">
+                                        Location is required
+                                    </span>
+                                </div>
+                            </div> -->
+                            <div class="form-group mt-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" checked disabled type="checkbox" value="" id="flexCheckDefault">
+                                    <label class="form-check-label" for="flexCheckDefault">
+                                        I state that I am ready with a min investment of INR 12-15 Lacs* & a min space
+                                        of 2000-3000 sqft, and have read, understood and accepted your Privacy Policy
+                                        and the Terms
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-group mt-3 d-flex justify-content-center">
+                                <button class="submit_btn" (click)="validationForm();">Submit</button>
+                            </div>
+                              </div>
+                    </form>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text_form">
+                            <div class="white_text">
+                                Start your own
+                                Kidzee preschool
+                                today!
+                            </div>
+                            <div class="sub_text mt-3">
+                                All you need is a <span class="text_color">2000-3000 sq foot</span>
+                                space and an <span class="text_color">investment ₹ 12-15 lakhs</span>
+                            </div>
+                            <div class="count_content mt-3">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="box">
+                                            <div class="top_text">2000+</div>
+                                            <div class="text_bottom">Centers</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="box">
+                                            <div class="top_text">750+</div>
+                                            <div class="text_bottom">cities</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="box">
+                                            <div class="top_text">20+</div>
+                                            <div class="text_bottom1">years of
+                                                Legacy</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="box1">
+                                            <div class="top_text">1.4</div>
+                                            <div class="text_bottom2">Million Students
+                                                Enquire Now</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        <div class="aboutUs_content">
+            <app-about-us></app-about-us>
+        </div>
+        <div class="chain_content">
+            <div class="chain_text">
+                Easy steps to partner with India’s widely present preschool chain!
+            </div>
+            <div class="container py-5">
+                <div class="main-timeline-4 text-white">
+               
+                  <div class="timeline-4 right-4">
+                    <div class="card gradient-custom-4">
+                      <div class="card-body">
+                        <div class="day">Day 1</div>
+                        <div class="para">
+                            <p>Enquire with us and fix a meeting for franchise business</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="timeline-4 left-4">
+                    <div class="card gradient-custom">
+                      <div class="card-body">
+                        <i class="fas fa-campground fa-2x mb-3"></i>
+                        <div class="day">Day 5</div>
+                        <div class="para">
+                            <p>Finalise your Preschool and Daycare location</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="timeline-4 right-4">
+                    <div class="card gradient-custom-4">
+                      <div class="card-body">
+                        <i class="fas fa-sun fa-2x mb-3"></i>
+                        <div class="day">Day 22</div>
+                        <div class="para">
+                            <p>Sign up with Us</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="timeline-4 left-4">
+                    <div class="card gradient-custom">
+                      <div class="card-body">
+                        <i class="fas fa-palette fa-2x mb-3"></i>
+                        <div class="day">Day 45</div>
+                        <div class="para">
+                            <p>Your Kidzee Preschool is operational</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+        </div>
+
+        <div class="award_content">
+            <div class="mainDiv3 mt-5">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="rightDiv">
+                            <div class="title_kidzee mt-3">India's most recognized Preschool Franchise</div>
+                            <div class="yearsListTab">
+                               <div class="active_years" (click)="clickYear(1)" id="year1">2022</div>
+                               <div class="years" (click)="clickYear(2)" id="year2">2021</div>
+                               <div class="years" (click)="clickYear(3)" id="year3">2020</div>
+                               <div class="years" (click)="clickYear(4)" id="year4">2019</div>
+                               <div class="years">and Before</div>
+                            </div>
+                            <div class="yearInfo_content">
+                                <ul class="yearContentList" *ngIf="year22">
+                                    <li><span class="dot">.</span>India's Most Trusted Preschool: TRA's Brand Trust Report, 2022</li>
+                                    <li><span class="dot">.</span>Ranked amongst the Top 100 Franchise Opportunities, 2022: Franchise India</li>
+                                </ul>
+                                <ul class="yearContentList" *ngIf="year21">
+                                    <li><span class="dot">.</span>India's Most Trusted Preschool: TRA's Brand Trust Report, 2021</li>
+                                    <li><span class="dot">.</span>Ranked amongst the Top 100 Franchise Opportunities, 2021: Franchise India</li>
+                                </ul>
+                                <ul class="yearContentList" *ngIf="year20">
+                                    <li><span class="dot">.</span>India's Most Trusted Preschool: TRA's Brand Trust Report, 2020</li>
+                                    <li><span class="dot">.</span>Ranked amongst the Top 100 Franchise Opportunities, 2020: Franchise India</li>
+                                </ul>
+                                <ul class="yearContentList" *ngIf="year19">
+                                    <li><span class="dot">.</span>India's Most Trusted Preschool: TRA's Brand Trust Report, 2019</li>
+                                    <li><span class="dot">.</span>Ranked amongst the Top 100 Franchise Opportunities, 2019: Franchise India</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class=" mt-3">
+                            <img src="../../../assets/img/award.png" alt="" class="awardImg responsive" align="center">
+                        </div>
+                    </div>
+                   
+                </div>
+            </div>
+        </div>
+
+        <div class="faqs_content">
+            <app-faqs></app-faqs>
+        </div>
+        <div class="testimonial_content">
+            <app-testimonial></app-testimonial>
+        </div>
+    </div>
+</section>

@@ -1,0 +1,145 @@
+.sleepMonkey {
+    background-image: url('../../../assets/img/monkey3.png');
+    background-position: center;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    width: 299px;
+    height: 88px;
+    position: relative;
+    top: 70px;
+    left: 147px;
+    display: block;
+}
+
+.sliderContent {
+    width: 80%;
+    height: 500px;
+    margin: auto;
+}
+.subContent {
+    width: 100%;
+    height: 500px;
+    background-color: #FFF;
+}
+.testimonial_text {
+    width: 85%;
+    margin: auto;
+    color: #0E2C53;
+    font-family: Inter;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 600;
+    padding: 20px 10px 10px 10px;
+    line-height: 25px;
+    text-transform: capitalize;
+}
+.testiMonial_img_content {
+    width: 200px;
+    margin: auto;
+
+}
+
+.testiMonial_img {
+    width: 150px;
+    height: 150px;
+    border-radius: 100px;
+    box-shadow: rgba(0, 0, 0, 0.16) 0px 1px 4px;
+    margin: auto;
+}
+.img_text {
+    color: #65318E;
+    text-align: center;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    text-transform: capitalize;
+    margin-top: 10px;
+}
+
+.carousel-control-next-icon {
+    background-color: rgb(201 191 191);
+    width: 20px;
+    height: 20px;
+    border-radius: 50px;
+    padding: 10px;
+}
+.carousel-control-prev-icon {
+    background-color: rgb(201 191 191);
+    width: 20px;
+    height: 20px;
+    border-radius: 50px;
+    padding: 10px;
+}
+
+.carousel-indicators [data-bs-target] {
+    box-sizing: content-box;
+    flex: 0 1 auto;
+    width:7px;
+    height:7px;
+    border-radius: 50px !important;
+    padding: 0;
+    margin-right: 3px;
+    margin-left: 3px;
+    text-indent: -999px;
+    cursor: pointer;
+    background-color: #9b9191;
+    background-clip: padding-box;
+    border: 0;
+    /* border-top: 10px solid transparent;
+    border-bottom: 10px solid transparent; */
+    opacity: .5;
+    transition: opacity .6s ease;
+}
+.commaImg{
+width:45px;
+height:40px;
+}
+.double_comma{
+    margin-top:20px;
+}
+.carousel-inner {
+    border-radius: 20px;
+}
+@media screen and (max-width: 600px) {
+.sleepMonkey {
+    display: none;
+}
+.testimonial_text{
+    width: 85%;
+    margin: auto;
+    color: #0E2C53;
+    font-family: Inter;
+    font-size: 14px;
+    font-style: normal;
+    font-weight: 600;
+    padding: 20px 10px 10px 10px;
+    line-height: 25px;
+    text-transform: capitalize;
+}
+.testiMonial_img{
+    width: 120px;
+    height: 120px;
+}
+
+.img_text{
+font-size: 12px;
+}
+
+.subContent{
+    width: 100%;
+    height: auto;
+    padding: 20px 0px;
+}
+.commaImg{
+    width: 25px;
+    height: 25px;
+}
+
+.double_comma{
+    margin-top:5px;
+}
+.subContent{
+    padding: 35px 0;
+}
+}

@@ -1,0 +1,349 @@
+<div class="desktopList">
+    <div class="faq_content">
+        <div class="title text-center">
+            FAQs
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="leftFaqs">
+                    <mat-accordion>
+                        <mat-expansion-panel *ngFor="let dt of faqdata;let even = even;let i=index">
+                                <mat-expansion-panel-header  *ngIf="even ==true">
+                                    {{dt.Title}}
+                                </mat-expansion-panel-header>
+                                <span [innerHTML]="dt.Short"></span>
+                        </mat-expansion-panel>
+                    </mat-accordion>
+                        <!-- <ul class="accordion left_ul">
+                            <li *ngFor="let category of faqdata;let even = even;let i=index">
+                                <div class="li" *ngIf="even ==true">
+                                <input type="radio" name="accordion" [id]="'first'+i" class="collapsed" (change)="getInputVal($event)">
+                                <label [for]="'first'+i"  >{{category.Title}}</label>
+                                <div class="content">
+                                    <p>{{category.Short}}</p>
+                                </div>
+                            </div>
+                            </li>
+                        </ul> -->
+                        <!-- <div class="form-group">
+                            <div class="accordion ms-auto col-sm-10" id="accordionExample" *ngFor="let category of faqdata;let even = even;let i=index">
+
+                              <div class="accordion-item" aria-multiselectable="true">
+                                <h2 class="accordion-header" id="'heading'+i" *ngIf="even ==true">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                        [attr.data-bs-target]="'#flush-collapseOne'+i" aria-expanded="false"
+                                        aria-controls="flush-collapseOne">
+                                    <label class="faqsText"> {{category.Title}}</label>
+                                    </button>
+                                </h2>
+                                <div [id]="'flush-collapseOne'+i" class="accordion-collapse collapse"  [attr.aria-labelledby]="'heading'+i"
+                                    [attr.data-bs-parent]="'#accordionFlushExample'">
+                                    <div class="accordion-body faqsSubText">{{category.Short}}
+                                    </div>
+                                </div>
+                            </div>
+                              </div>
+                              </div> -->
+                        <!-- <static code> -->
+                            <!-- <div class="accordion ms-auto col-sm-10" id="accordionExample1"
+                            *ngFor="let category of faqdata;let odd = odd;let i=index"> -->
+
+                        <!-- <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    [attr.data-bs-target]="'#flush-collapseOne'+i" aria-expanded="false"
+                                    [attr.aria-controls]="'flush-collapseOne'+i">
+                                <label class="faqsText"> {{category.Title}}</label>
+                                </button>
+                            </h2>
+                            <div [id]="'flush-collapseOne'+i" class="accordion-collapse collapse"
+                                data-bs-parent="#accordionFlushExample">
+                                <div class="accordion-body faqsSubText">{{category.Short}}
+                                </div>
+                            </div>
+                        </div> -->
+                        <!-- <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#flush-collapse2" aria-expanded="false"
+                                    aria-controls="flush-collapseOne">
+                                    <label class="faqsText">Is Kidzee only available in certain
+                                        regions or cities?
+                                    </label>
+                                </button>
+                            </h2>
+                            <div id="flush-collapse2" class="accordion-collapse collapse"
+                                data-bs-parent="#accordionFlushExample">
+                                <div class="accordion-body faqsSubText">Kidzee has a wide presence across various
+                                    locations with the presence of 750+ cities. To find a Kidzee Preschool near you,
+                                    please use our school locator on the website.</div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#flush-collapse3" aria-expanded="false"
+                                    aria-controls="flush-collapseOne">
+                                    <label class="faqsText">What age groups do Kidzee programs
+                                        cater to?</label>
+                                </button>
+                            </h2>
+                            <div id="flush-collapse3" class="accordion-collapse collapse"
+                                data-bs-parent="#accordionFlushExample">
+                                <div class="accordion-body faqsSubText">Kidzee offers programs for children aged 1.5
+                                    years to 5.5 years, including Playgroup, Nursery, and Kindergarten.</div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#flush-collapse4" aria-expanded="false"
+                                    aria-controls="flush-collapseOne">
+                                    <label class="faqsText">Are the educators at Kidzee
+                                        qualified and experienced?</label>
+                                </button>
+                            </h2>
+                            <div id="flush-collapse4" class="accordion-collapse collapse"
+                                data-bs-parent="#accordionFlushExample">
+                                <div class="accordion-body faqsSubText">Yes, Kidzee educators are certified
+                                    professionals with extensive experience in early childhood education. We maintain a
+                                    low teacher-student ratio to ensure personalized attention.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#flush-collapse5" aria-expanded="false"
+                                    aria-controls="flush-collapseOne">
+                                    <label class="faqsText">What sets Kidzee's curriculum apart
+                                        from other preschools?
+                                    </label>
+                                </button>
+                            </h2>
+                            <div id="flush-collapse5" class="accordion-collapse collapse"
+                                data-bs-parent="#accordionFlushExample">
+                                <div class="accordion-body faqsSubText">Kidzee's curriculum is designed to provide a
+                                    well-rounded education, emphasizing creativity, critical thinking, and emotional
+                                    intelligence. It's tailored to each age group and encourages experiential learning.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#flush-collapse05" aria-expanded="false"
+                                    aria-controls="flush-collapseOne">
+                                    <label class="faqsText"> Can I tour the Kidzee Preschool
+                                        facility before enrolling my child?
+                                    </label>
+                                </button>
+                            </h2>
+                            <div id="flush-collapse05" class="accordion-collapse collapse"
+                                data-bs-parent="#accordionFlushExample">
+                                <div class="accordion-body faqsSubText">Yes, Kidzee encourages parents to visit our
+                                    facilities to get a firsthand look at our nurturing environment. Please contact your
+                                    local Kidzee center to schedule a tour.</div>
+                            </div>
+                        </div> -->
+                        <!-- </div> -->
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="rightFaqs">
+                    <mat-accordion>
+
+                        <mat-expansion-panel *ngFor="let dt of faqdata;let odd = odd;let i=index">
+
+                                <mat-expansion-panel-header  *ngIf="odd ==true">
+                                    {{dt.Title}}
+
+                                </mat-expansion-panel-header>
+                                <span  [innerHTML]="dt.Short"></span>
+
+                        </mat-expansion-panel>
+                    </mat-accordion>
+                    <!-- <ul class="accordion">
+                        <li *ngFor="let category of faqdata;let odd = odd;let i=index">
+                            <div class="li" *ngIf="odd ==true">
+                            <input type="radio" name="accordion" [id]="'first'+i">
+                            <label [for]="'first'+i">{{category.Title}}</label>
+                            <div class="content">
+                                <p>{{category.Short}}</p>
+                            </div>
+                        </div>
+                        </li>
+                    </ul> -->
+                    <!-- <div class="form-group">
+                        <div class="accordion ms-auto col-sm-10" id="accordionExample1"
+                            *ngFor="let category of faqdata;let odd = odd;let i=index">
+
+                            <div class="accordion-item" aria-multiselectable="true">
+                                <h2 class="accordion-header" id="'heading'+i" *ngIf="odd ==true">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                        [attr.data-bs-target]="'#flush-collapseOne1'+i" aria-expanded="true"
+                                        aria-controls="flush-collapseOne1" [attr.aria-controls]="'collapse'+i">
+                                        <label class="faqsText"> {{category.Title}}</label>
+                                    </button>
+                                </h2>
+                                <div [id]="'flush-collapseOne1'+i" class="accordion-collapse collapse"
+                                    [attr.aria-labelledby]="'heading'+i"
+                                    [attr.data-bs-parent]="'#accordionFlushExample'">
+                                    <div class="accordion-body faqsSubText">{{category.Short}}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> -->
+                    <!-- <static code> -->
+                    <!-- <div class="accordion accordion-flush" id="accordionFlushExample1">
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#flush-collapse6" aria-expanded="false"
+                                    aria-controls="flush-collapseOne">
+                                    <label class="faqsText"> How can parents stay involved in
+                                        their child's education at Kidzee?</label>
+                                </button>
+                            </h2>
+                            <div id="flush-collapse6" class="accordion-collapse collapse"
+                                data-bs-parent="#accordionFlushExample1">
+                                <div class="accordion-body faqsSubText">Kidzee promotes parent-teacher collaboration
+                                    through regular meetings, progress updates, and various involvement opportunities to
+                                    keep parents informed and engaged.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#flush-collapse7" aria-expanded="false"
+                                    aria-controls="flush-collapseOne">
+                                    <label class="faqsText">What is the process for admission
+                                        to Kidzee Preschool?
+                                    </label>
+                                </button>
+                            </h2>
+                            <div id="flush-collapse7" class="accordion-collapse collapse"
+                                data-bs-parent="#accordionFlushExample1">
+                                <div class="accordion-body faqsSubText">Admission procedures may vary by location. To
+                                    inquire about admissions, visit our website, or contact the nearest Kidzee center
+                                    directly.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#flush-collapse8" aria-expanded="false"
+                                    aria-controls="flush-collapseOne">
+                                    <label class="faqsText">What advantages does enrolling my
+                                        child in preschool offer, and when should they get started?</label>
+                                </button>
+                            </h2>
+                            <div id="flush-collapse8" class="accordion-collapse collapse"
+                                data-bs-parent="#accordionFlushExample1">
+                                <div class="accordion-body faqsSubText">Preschool offers numerous benefits, including
+                                    socialization, early learning skills, and cognitive development. It's recommended to
+                                    start preschool between the ages of 2 to 3 years, but it can vary based on
+                                    individual readiness.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#flush-collapse9" aria-expanded="false"
+                                    aria-controls="flush-collapseOne">
+                                    <label class="faqsText"> What form of educational
+                                        philosophy does Kidzee Preschool follow?
+                                    </label>
+                                </button>
+                            </h2>
+                            <div id="flush-collapse9" class="accordion-collapse collapse"
+                                data-bs-parent="#accordionFlushExample1">
+                                <div class="accordion-body faqsSubText">Kidzee Preschool follows a child-centric
+                                    educational philosophy that focuses on holistic development. Our approach combines
+                                    play-based learning, creativity, and a nurturing environment to foster a love for
+                                    learning.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#flush-collapse10" aria-expanded="false"
+                                    aria-controls="flush-collapseOne">
+                                    <label class="faqsText">How does Kidzee help prepare
+                                        children for the transition to primary school?
+                                    </label>
+                                </button>
+                            </h2>
+                            <div id="flush-collapse10" class="accordion-collapse collapse"
+                                data-bs-parent="#accordionFlushExample1">
+                                <div class="accordion-body faqsSubText">Kidzee's programs are designed to ensure a
+                                    smooth transition to primary school by building essential skills in literacy,
+                                    numeracy, social interaction, and emotional development.
+                                </div>
+                            </div>
+                        </div>
+                    </div> -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="714" viewBox="0 0 1440 714" fill="none">
+        <g filter="url(#filter0_d_489_3315)">
+            <path
+                d="M713.333 72.1106C230.723 -75.398 0.000122097 137.115 0.000122097 137.115L0 596.845C0 596.845 290.716 801.943 837.865 616.148C1182.44 499.139 1440 629.149 1440 629.149L1435.5 49.1079C1435.5 49.1079 1036.73 170.956 713.333 72.1106Z"
+                fill="#DFCFFF" />
+        </g>
+        <defs>
+            <filter id="filter0_d_489_3315" x="-20" y="0" width="1480" height="714" filterUnits="userSpaceOnUse"
+                color-interpolation-filters="sRGB">
+                <feFlood flood-opacity="0" result="BackgroundImageFix" />
+                <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"
+                    result="hardAlpha" />
+                <feOffset />
+                <feGaussianBlur stdDeviation="10" />
+                <feComposite in2="hardAlpha" operator="out" />
+                <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.06 0" />
+                <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_489_3315" />
+                <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_489_3315" result="shape" />
+            </filter>
+        </defs>
+    </svg>
+</div>
+<div class="mobileListDiv">
+    <div class="faq_content">
+        <div class="title text-center">
+            FAQs
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="leftFaqs">
+                    <mat-accordion>
+                        <mat-expansion-panel *ngFor="let dt of faqdata;let even = even;let i=index">
+                                <mat-expansion-panel-header  *ngIf="even ==true">
+                                    {{dt.Title}}
+                                </mat-expansion-panel-header>
+                                <div class="details">{{dt.Short}}</div>
+                        </mat-expansion-panel>
+                    </mat-accordion>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="rightFaqs">
+                    <mat-accordion>
+                        <mat-expansion-panel *ngFor="let dt of faqdata;let odd = odd;let i=index">
+                                <mat-expansion-panel-header  *ngIf="odd ==true">
+                                    {{dt.Title}}
+                                </mat-expansion-panel-header>
+                                <div class="details">{{dt.Short}}</div>
+                        </mat-expansion-panel>
+                    </mat-accordion>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

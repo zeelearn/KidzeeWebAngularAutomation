@@ -1,0 +1,88 @@
+<div class="testimonial_content">
+    <div class="sleepMonkey"></div>
+    <div class="title text-center">Testimonial</div>
+    <div class="sliderContent mt-4">
+        <div id="carouselExampleIndicators" class="carousel slide">
+            <div class="carousel-indicators">
+                <button type="button" data-bs-target="#carouselExampleIndicators" *ngFor="show of testimonydata; let i = index"
+
+                [attr.data-bs-slide-to]="i" [ngClass]="{'active' : i == 0}" aria-current="true" aria-label="Slide 1"></button>
+                <!-- <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1"
+                    aria-label="Slide 2"></button>
+                <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2"
+                    aria-label="Slide 3"></button> -->
+            </div>
+            <div class="carousel-inner">
+                <div class="carousel-item" *ngFor="let a of testimonydata ; let i = index" [ngClass]="{'active': i === 0}">
+                    <div class="subContent">
+                        <div class="double_comma text-center"><img src="../../../assets/img/coma.png" class="commaImg responsive" alt=""></div>
+                        <div class="testimonial_text">
+                           {{a.Short}}
+                        </div>
+                        <div class="testiMonial_img_content mt-2">
+                            <div class="testiMonial_img">
+                                <img src={{a.files[0].url}} alt="" class="testiMonial_img">
+                            </div>
+                            <div class="img_text">{{a.Title}}</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- <div class="carousel-item">
+                    <div class="subContent">
+                        <div class="double_comma text-center"><img src="../../../assets/img/coma.png" class="commaImg responsive" alt=""></div>
+                        <div class="testimonial_text">
+                            My daughter is very lucky to have had such enriching experiences with Kidzee. All
+                            her teachers at the Preschool are well-trained.
+                            Thank you for fostering the love for learning in my child.
+                        </div>
+                        <div class="testiMonial_img_content mt-5">
+                            <div class="testiMonial_img">
+                                <img src="../../../assets/img/Bhagyashree.png" alt="" class="testiMonial_img responsive" align="center" alt="">
+                            </div>
+                            <div class="img_text">Bhagyashree Bhagat</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="carousel-item">
+                    <div class="subContent">
+                        <div class="double_comma text-center"><img src="../../../assets/img/coma.png" class="commaImg responsive" alt=""></div>
+                        <div class="testimonial_text">
+                            My daughter is very lucky to have had such enriching experiences with Kidzee. All
+                            her teachers at the Preschool are well-trained.
+                            Thank you for fostering the love for learning in my child.
+                        </div>
+                        <div class="testiMonial_img_content mt-4">
+                            <div class="testiMonial_img"></div>
+                            <div class="img_text">Bhagyashree Bhagat</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="carousel-item">
+                  <div class="subContent">
+                    <div class="double_comma text-center"><img src="../../../assets/img/coma.png" class="commaImg responsive" alt="">
+                    </div>
+                    <div class="testimonial_text">
+                      My daughter is very lucky to have had such enriching experiences with Kidzee. All
+                      her teachers at the Preschool are well-trained.
+                      Thank you for fostering the love for learning in my child.
+                    </div>
+                    <div class="testiMonial_img_content mt-4">
+                      <div class="testiMonial_img"></div>
+                      <div class="img_text">Bhagyashree Bhagat</div>
+                    </div>
+                  </div>
+                </div> -->
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators"
+                data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleIndicators"
+                data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+        </div>
+    </div>
+</div>

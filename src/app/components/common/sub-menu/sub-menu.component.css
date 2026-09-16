@@ -1,0 +1,16 @@
+.tex_menu{
+    color: #FFF;
+    margin-left: 10px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+span a{
+    color: #FFF;
+    text-decoration: none;
+}
+span a:hover{
+    color: #e4dede;
+    cursor: pointer;
+}
+  

@@ -1,0 +1,48 @@
+
+.monkeyContent {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.aboutUs {
+    position: relative;
+    margin-top: 45px;
+}
+
+
+.monkey1 {
+    width: 230px;
+    height: 340px;
+    margin-right: 70px;
+}
+
+.right_content1 {
+    width: 100%;
+    padding: 15px 50px 0px 15px;
+}
+.mainDiv2 .right_content1 {
+    padding: 15px 50px 0px 60px;
+}
+@media screen and (max-width: 600px) {
+.monkeyContent {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.aboutUs {
+    /* position: relative; */
+    margin-top:0px;
+
+}
+
+.monkey1 {
+    margin-right: 0px;
+}
+.right_content1 {
+    width: 100%;
+    padding: 10px 10px;
+}
+.mainDiv2 .right_content1 {
+    padding: 10px 15px;
+}
+}

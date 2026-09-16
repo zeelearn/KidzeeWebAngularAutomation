@@ -1,0 +1,71 @@
+<section>
+    <div class="blogsDiv">
+        <div class="spinner" *ngIf="spinner">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+        </div>
+        <div class="title text-center">Blogs</div>
+        <div class="row mt-5">
+            <div class="col-md-4" *ngFor="let item of blogdata ;let i=index">
+                <div class="blogsImgContent">
+                   <div class="upperBg">
+                    <img src={{item.files[0].url}} loading="lazy" class="img" alt={{item.files[0].filename}}>
+                   </div>
+                   <div class="infoContent">
+                    <div class="date">{{item.FromDate}}</div>
+                    <div class="text1">{{item.Title}}</div>
+                    <div class="para">
+                        <div class="box">
+                        <input type="checkbox" id="{{i}}">
+                        <p>{{item.Short}}</p>
+                       
+                            <!-- <label for="{{i}}" class="readMoreBtn" role="button" routerLink="blog/{{item.slug}}">Read More</label> -->
+                        </div>
+                        <a class="" role="button" routerLink="/blog/{{item.slug}}"><button class="btn readMoreBtn">Read More</button></a>
+                    </div>
+                </div>
+                </div>
+            </div>
+            <!-- <div class="col-md-4">
+                <div class="blogsImgContent">
+                   <div class="upperBg">
+                    <img srcset="../../../assets/img/littleGirl.png" loading="lazy" class="img" alt="">
+                   </div>
+                   <div class="infoContent">
+                    <div class="date">January 9, 2023</div>
+                    <div class="text1">A dozen must ask questions about Preschools</div>
+                    <div class="para">
+                        <div class="box">
+                            <input type="checkbox" id="expanded10">
+                        <p>Parents of toddlers are cautious about choosing the first school for the apple of their
+                            eye. </p>
+                            <label for="expanded10" class="readMoreBtn" role="button" routerLink="blog/blogs_details">Read More</label>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="blogsImgContent">
+                   <div class="upperBg">
+                    <img srcset="../../../assets/img/littleGirl.png" loading="lazy" class="img" alt="">
+                   </div>
+                   <div class="infoContent">
+                    <div class="date">January 9, 2023</div>
+                    <div class="text1">A dozen must ask questions about Preschools</div>
+                    <div class="para">
+                        <div class="box">
+                            <input type="checkbox" id="expanded11">
+                        <p>Parents of toddlers are cautious about choosing the first school for the apple of their
+                            eye. </p>
+                            <label for="expanded11" class="readMoreBtn" role="button" routerLink="blog/blogs_details">Read More</label>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div> -->
+
+        </div>
+    </div>
+</section>

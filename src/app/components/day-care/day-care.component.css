@@ -1,0 +1,81 @@
+.mainDiv {
+    background-color: #EBE1FF;
+    padding: 0px 0px 45px;
+}
+
+.banner_content {
+    background-image: url('../../../assets/img/banner/Banner7.png');
+    position: relative;
+    width: 100%;
+    min-height: 350px;
+    padding: 20px;
+    box-sizing: border-box;
+    background-repeat: no-repeat;
+    background-blend-mode: screen;
+    display: grid;
+    place-content: center;
+}
+
+.subMenu_content {
+    position: absolute;
+    top: 11rem;
+    left: 4rem;
+}
+.dayCardImg {
+    width: 100%;
+}
+.schoolGirlImg {
+    width: 400px;
+    height: 410px;
+    float: right;
+    margin-right:15px;
+}
+.subTitle{
+color: #65318E;
+text-align: center;
+font-size:25px;
+font-style: normal;
+font-weight: 900;
+line-height: normal;
+}
+
+.right_content1 {
+    width: 100%;
+    padding: 15px 50px 0px 15px;
+}
+.paragraph_content1 {
+    width: 450px;
+    position: absolute;
+    right: 0;
+    top: 240px;
+    margin: 0px 111px 0px 0px;
+}
+.dayCareImg{
+    width: 100%;
+    padding: 20px 50px;
+}
+@media screen and (max-width: 600px) {
+    .dayCareImg{
+        width: 100%;
+        padding:20px;
+    }
+    .schoolGirlImg {
+        width: 22rem;
+        height: 22rem;
+        margin: auto;
+    }
+    .dayCardImg {
+        display: flex;
+        justify-content: center;
+    }
+    .banner_content {
+        background-size: 100% 100%;
+        min-height:200px;
+    }
+
+    .subMenu_content {
+        position: absolute;
+        top: 4rem;
+        left: 0rem;
+    }
+}

@@ -1,0 +1,28 @@
+<app-common-header></app-common-header>
+<section>
+    <div class="mainDiv">
+        <div class="banner_content">
+            <div class="whiteTitle">{{headerTitle}}</div>
+            <div class="subMenu_content">
+                <app-sub-menu></app-sub-menu>
+            </div>
+        </div>
+        <div>
+
+    </div>
+
+  <div class="all_blog mt-5" *ngIf="allBlogs">
+    <app-all-blog></app-all-blog>
+
+  </div>
+  <div class="blog_imgGallery mt-5" *ngIf="!allBlogs">
+    <app-blog-details></app-blog-details>
+  </div>
+
+    </div>
+    <div class="monkey_img_content">
+        <img srcset="../../../../assets/img/standingMonkey.png" alt="" loading="lazy" class="studying_monkey">
+    </div>
+
+</section>
+<app-footer></app-footer>

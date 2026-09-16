@@ -1,0 +1,137 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    overflow-x: hidden !important;
+}
+
+
+section {
+    overflow-x: hidden;
+}
+
+.title {
+    color: #65318E;
+    font-size: 2rem;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+}
+
+.sub_title {
+    color: #65318E;
+    font-size: 1.3rem;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+}
+
+.whiteTitle {
+    color: #FFF;
+    font-size: 2.5rem;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+    margin-top: 90px;
+}
+
+
+.subTitle {
+    color: #282828;
+    font-size: 1.5rem;
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
+}
+
+.paragraph_content {
+    color: #282828;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 400;
+    line-height: 28px;
+    text-align: justify;
+}
+
+.faqImg_style {
+    width: 300px;
+    height: 300px;
+    float: right;
+}
+
+.img_content {
+    width: 300px;
+    margin: auto;
+}
+
+.doth {
+    font-size: 35px;
+    font-weight: bold;
+}
+
+.liText {
+    color: #282828;
+    font-size: 15px;
+    font-style: normal;
+    font-weight: 400;
+    margin-left: 5px;
+}
+.activeTab{
+    background: #65318E !important;
+    border: #65318E !important;
+}
+
+@media screen and (max-width: 600px) {
+    .paragraph_content {
+        color: #282828;
+        font-size: 15px;
+        font-style: normal;
+        font-weight: 400;
+        line-height: 28px;
+        text-align: justify;
+    }
+  .preSchoolContent{
+    width: 100%;
+  }
+  .text_content{
+    width: 100%;
+    /* padding: 10px 35px; */
+  }
+    .whiteTitle {
+        font-size: 1.2rem;
+        margin-top: 50px;
+    }
+
+    .title {
+        color: #65318E;
+        font-size: 2rem;
+        font-style: normal;
+        text-align: center;
+        margin-top: 20px;
+        font-weight: 700;
+        line-height: normal;
+    }
+
+    .row {
+        --bs-gutter-x: 0 !important;
+    }
+
+    .subTitle {
+        color: #282828;
+        font-size: 1.2rem;
+        text-align: center;
+        font-style: normal;
+        font-weight: 600;
+        line-height: normal;
+    }
+}
+
+html {
+    overflow-x: hidden !important;
+}
+
+body {
+    /* background-color: #EBE1FF; */
+    font-family: 'Inter';
+    overflow-x: hidden !important;
+}

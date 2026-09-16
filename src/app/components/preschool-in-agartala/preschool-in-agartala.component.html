@@ -1,0 +1,102 @@
+<app-common-header></app-common-header>
+<section>
+    <div class="mainDiv">
+        <div class="legancy_content">
+            <div class="whiteTitle">{{headerTitle}}</div>
+            <div class="subMenu_content_admission">
+                <app-sub-menu></app-sub-menu>
+            </div>
+        </div>
+        <div class="admissionForm">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="text_content_right">
+                        Best Preschool & Kindergarten in Agartala
+                    </div>
+                </div>
+                <div class="col-md-6">          
+                    <app-admissions-form></app-admissions-form>
+                </div>
+            </div>
+        </div>
+        <div class="count_content mt-5">
+            <div class="row">
+                <div class="col-md-2">
+                    <div class="box">
+                        <div class="top_text">100%</div>
+                        <div class="text_bottom">support</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="box">
+                        <div class="top_text">2,000+</div>
+                        <div class="text_bottom">preschools</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="box">
+                        <div class="top_text">750+</div>
+                        <div class="text_bottom">cities</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="box">
+                        <div class="top_text">700+</div>
+                        <div class="text_bottom1">elements in
+                            starter kit</div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="box1">
+                        <div class="top_text">most
+                            awarded</div>
+                        <div class="text_bottom2">preschool</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+       <div class="ourPrograms_content">
+        <app-programmes></app-programmes>
+       </div>
+       <div class="euroKids_content">
+        <div class="euroKids_title text-center">Why choose EuroKids Preschool in Agartala</div>
+        <div class="paragraph_content text-white mt-3">
+            <p><code>EuroKids</code> Preschool in Agartala is a renowned and established brand with a child-centric approach to education, it also recognizes the importance of daycare in providing a safe and nurturing environment for children, making it an ideal choice for parents seeking quality care and early education. They have experienced faculty who create a supportive and engaging learning environment. The preschool offers a well-structured curriculum that fosters curiosity and critical thinking skills. Safety and security measures are prioritized, and the infrastructure provides a stimulating environment. EuroKids promotes parent involvement and prepares children for a smooth transition to primary school. With a legacy of over 21 years and 1400+ schools across three countries, here are the prime reasons why EuroKids is the leading choice for parents who seek the best for their little ones.
+            </p>
+        </div>
+        <div class="euroKids_title text-center">The Best Early Education</div>
+        <div class="paragraph_content text-white mt-3">
+            <p>Discover the power of our innovative curriculum, EUNOIA, meticulously designed to provide a well-rounded education. Through play-based learning, our EuroJunior and EuroSenior programs ensure that your child's physical, emotional, and cognitive skills flourish, setting the foundation for a bright future.</p>
+        </div>
+        <div class="readMoreCOntent" *ngIf="readMoreContent">
+            <div class="euroKids_title text-center">Trained and skilled faculty</div>
+        <div class="paragraph_content text-white mt-3">
+            <p>Our passionate and trained faculty, maintaining a healthy teacher-student ratio of 1:10, guarantees personalized attention for your child. They bring the joy of learning to life, encouraging your little explorer to unleash their potential and pursue their passions.</p>
+        </div>
+        <div class="euroKids_title text-center">Safe, child-friendly environment</div>
+        <div class="paragraph_content text-white mt-3">
+        <p>Rest easy knowing that your child is safe within our secure premises. With 24/7 CCTV surveillance and stringent safety protocols, we prioritize your child's well-being, allowing them the freedom to learn, grow, and discover in an enriching environment.</p>
+        </div>
+
+        <div class="euroKids_title text-center">Increased flexibility and innovation</div>
+        <div class="paragraph_content text-white mt-3">
+       <p>Embrace the power of innovation with our HomeBuddy app, providing a dynamic platform for interactive and engaging learning experiences beyond the classroom. We also offer intercity student transfer, ensuring a seamless educational journey even when life takes you to new horizons.
+       </p>
+       <p>At EuroKids Preschool in Agartala, we are committed to providing an enriching learning experience that fosters intelligence, sharpness, and skill development, free from the pressures of conventional education. Join us on this extraordinary journey, and witness your child's transformation into a confident, successful and balanced individual.
+       </p>
+        </div>
+        </div>
+        <div class="btn_div d-flex justify-content-center mt-3">
+            <button class="btn btn_readMore" *ngIf="readMore" (click)="showContent(1)">Read More</button>
+            <button class="btn btn_readLess" *ngIf="readLess" (click)="showContent(2)">Read Less</button>
+        </div>
+       </div> 
+       <div class="centers_content mt-5">
+        <app-centers-in-agartala></app-centers-in-agartala>
+       </div>
+       <div class="faqs_content">
+        <app-faqs></app-faqs>
+       </div>
+    </div>
+</section>
+<app-footer></app-footer>

@@ -1,0 +1,81 @@
+.mainDiv {
+    background-color: #EBE1FF;
+    padding: 0px 0px 45px;
+}
+
+.banner_content {
+    background-image: url('../../../assets/img/banner/Banner4.png');
+    position: relative;
+    width: 100%;
+    min-height: 350px;
+    padding: 20px;
+    box-sizing: border-box;
+    background-repeat: no-repeat;
+    background-blend-mode: screen;
+    display: grid;
+    place-content: center;
+}
+.subMenu_content {
+    position: absolute;
+    top: 11rem;
+    left: 4rem;
+}
+.pentemindImg{
+    width: 180px;
+    height: 220px;
+    float: right;
+}
+.pentemindeContent{
+color: #282828;
+font-size:16px;
+font-style: normal;
+font-weight: 400;
+line-height: 28px;
+padding: 30px 60px 0px 60px;
+}
+.img_contentText{
+color: #282828;
+text-align: center;
+font-size: 13px;
+font-style: normal;
+font-weight: 400;
+line-height: normal;
+}
+.monkeyImgList{
+    width: 160px;
+    height: 170px;
+}
+.learningMindImgList{
+margin-top: 55px;
+}
+.learningTitle{
+color: #000;
+font-size:23px;
+font-style: normal;
+font-weight: 800;
+line-height: 28px;
+}
+
+@media screen and (max-width: 600px) {
+.banner_content {
+    background-size: 100% 100%;
+    min-height:200px;
+}
+.subMenu_content {
+    position: absolute;
+    top: 4rem;
+    left: 0rem;
+}
+.pentemindeLogo{
+    width: 180px;
+    margin: auto;
+    margin-top: 45px;
+}
+.learningMonkey{
+    width: 160px;
+    margin: auto;
+}
+.img_contentText{
+    padding: 0px 40px;
+}
+}

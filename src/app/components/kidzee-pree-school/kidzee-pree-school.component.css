@@ -1,0 +1,108 @@
+.preSchoolbgImg_content {
+    position: absolute;
+    width: 100%;
+    display: block;
+}
+
+
+.preSchoolbgImg {
+    width: 100%;
+    height: 1000px;
+    margin: auto;
+}
+
+.paragraph_content1 {
+    width: 450px;
+    position: absolute;
+    right: 0;
+    top: 240px;
+    margin: 0px 111px 0px 0px;
+}
+
+.smallGroupImg {
+    width: 500px;
+    height: 500px;
+    position: absolute;
+    bottom: 130px;
+    right: 63px;
+}
+.mobileView {
+    display: none;
+}
+.maskImg{
+    width: 100%;
+    height:750px;
+    position: relative;
+}
+.paragraph_content1 {
+    width: 450px;
+    position: absolute;
+    right: 0;
+    top: 240px;
+    margin: 0px 111px 0px 0px;
+}
+
+.subImg{
+    width:100%;
+    height:360px;
+    position: relative;
+}
+
+.title_right {
+    float: right;
+    color: #65318E;
+    top: 0;
+    margin: 130px 216px 10px 10px;
+    right: 0;
+    font-size: 2.5rem;
+    position: absolute;
+    font-style: normal;
+    font-weight: 700;
+    line-height: normal;
+}
+@media screen and (max-width: 600px) {
+
+
+    .subImg{
+        width: 100%;
+        height: 360px;
+        position: absolute;
+        top: 335px;
+    }
+    .paragraph_content1 {
+        top: 170px;
+        margin: auto;
+        text-align: center;
+        width: 100%;
+    }
+    .preSchoolbgImg_content {
+        display: none;
+    }
+    .maskImg .paragraph_content1{
+        margin: 0;
+        width: 100%;
+        padding: 10px;
+        position: static;
+    }
+    .mobileView {
+        display: block;
+        width: 100%;
+        position: absolute;
+    }
+    .title_right{
+        margin: 55px 0px 0px 0px;
+        text-align: center;
+        color: #65318E;
+        font-size: 2rem;
+        font-style: normal;
+        font-weight: 700;
+        width: 100%;
+        line-height: normal;
+    }
+    .maskImg .paragraph_content1{
+        margin: 0;
+        width: 100%;
+        padding: 10px;
+        position: static;
+    }
+}

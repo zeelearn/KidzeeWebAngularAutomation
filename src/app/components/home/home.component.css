@@ -1,0 +1,402 @@
+header h1 {
+    font-size: 4rem;
+    color: #65318E;
+}
+
+.mainDiv {
+    background-color: #EBE1FF;
+    min-height: 385px;
+}
+
+.mainDiv2 {
+    background-color: #EBE1FF;
+    min-height: 530px;
+}
+
+.mainDiv21 {
+    background-color: #EBE1FF;
+    min-height: 750px;
+}
+img{
+    cursor: pointer;
+}
+#svg1 {
+    position: absolute;
+    width: 100%;
+    height: auto;
+}
+
+#svg2 {
+    width: 100%;
+    height: auto;
+}
+
+.startBtn {
+    padding: 5px 15px 5px 15px;
+}
+
+.right_content1 {
+    width: 100%;
+    padding: 15px 50px 0px 15px;
+}
+
+.imgDiv {
+    width: 100%;
+}
+
+
+
+.readMoreBtn {
+    background-color: #65318E;
+    color: #FFF;
+    text-align: center;
+    font-size: 10px;
+    font-style: normal;
+    border: none;
+    font-weight: 500;
+    padding: 3px 7px 3px 4px;
+    border-radius: 0px 53px 53px 20px;
+    margin-top: 6px;
+}
+
+.boyImg {
+    height: 870px;
+    width: 455px;
+}
+
+.dayCareText {
+    width: 100%;
+}
+
+.dayCardImg {
+    width: 100%;
+}
+
+.dayCareContent {
+    position: absolute;
+    width: 100%;
+    margin-top: 45px;
+}
+
+.dayCareContent1 {
+    position: absolute;
+    width: 100%;
+    margin-top: 300px;
+}
+
+.mainDiv2 .right_content1 {
+    padding: 15px 50px 0px 60px;
+}
+
+.schoolGirlImg {
+    width: 400px;
+    height: 410px;
+}
+
+.franchiseImg {
+    width: 400px;
+    height: 410px;
+    float: right;
+    margin-right: 45px;
+}
+
+.mainDiv3 {
+    background-color: #EBE1FF;
+    min-height: 630px;
+}
+
+.pentemindgroupImg {
+    height: 500px;
+    margin: auto;
+}
+
+.pentemindGroup {
+    position: absolute;
+    width: 100%;
+}
+
+.mainDiv4 {
+    background-color: #EBE1FF;
+    min-height: 754px;
+}
+
+.mainDiv4 .title {
+    margin: 125px 225px 0px 0px;
+    float: right;
+}
+
+.paragraph_content1 {
+    width: 450px;
+    position: absolute;
+    right: 0;
+    top: 240px;
+    margin: 0px 111px 0px 0px;
+}
+
+.mobileView {
+    display: none;
+}
+
+.mainDiv5 {
+    background-color: #EBE1FF;
+    min-height: 740px;
+}
+
+.leftFaqs {
+    width: 100%;
+}
+
+.rightFaqs {
+    width: 100%;
+}
+
+.faqsText {
+    color: #90228D;
+    font-size: 18px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: normal;
+    overflow: hidden;
+    margin-left: 30px;
+}
+
+.faqsSubText {
+    color: #90228D;
+    font-size: 16px;
+    padding-left: 45px;
+}
+
+.desktopList {
+    display: block;
+}
+
+.mobileListDiv {
+    display: none;
+}
+
+.mainDiv6 {
+    background-color: #EBE1FF;
+    min-height: 600px;
+}
+
+.mainDiv7 {
+    background-color: #EBE1FF;
+    min-height: 700px;
+}
+
+.sliderContent {
+    width: 80%;
+    height: 500px;
+    margin: auto;
+}
+
+.carousel-control-prev-icon,
+.carousel-control-next-icon {
+    height: 15px;
+    width: 15px;
+    outline: black;
+    background-color: rgba(0, 0, 0, 0.3);
+    background-size: 100%, 100%;
+    border-radius: 50%;
+}
+
+header {
+    background-color: #EBE1FF;
+}
+
+.desktopHeader {
+    background-image: url('../../../assets/img/banner/Banner1.png');
+    position: relative;
+    width: 100%;
+    height: 350px;
+    display: flex;
+    justify-content: space-between;
+    padding: 20px;
+    box-sizing: border-box;
+    background-repeat: no-repeat;
+    background-blend-mode: screen;
+    display: block;
+}
+
+.mobileHeader {
+    display: none;
+}
+
+.banner_div_slider {
+    width: 100%;
+    margin-top:8rem;
+}
+
+.slider_img {
+    width: 100%;
+    height: 600px;
+    border-radius: 0px;
+}
+.mobile_banner{
+    display: none;
+}
+.desktop_viwe_banner{
+    display: block;
+}
+@media screen and (max-width: 600px) {
+    .desktop_viwe_banner{
+        display: none;
+    }
+    .mobile_banner{
+        display: block;
+    }
+    .banner_div_slider {
+        margin-top: 3rem;
+    }
+
+    .slider_img {
+        width: 100%;
+        height: auto;
+        border-radius: 0px;
+    }
+
+    .dayCardImg {
+        display: flex;
+        justify-content: center;
+    }
+
+    .mainDiv {
+        min-height:780px;
+    }
+
+    .mobileHeader {
+        display: block;
+    }
+
+    .desktopHeader {
+        display: none;
+    }
+
+    .whiteHeader {
+        background-image: url('../../../assets/img/banner/Banner1.png');
+        background-position: center;
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+        width: 100%;
+        height: 250px;
+        position: absolute;
+    }
+
+    .mainDiv6 {
+        background-color: #EBE1FF;
+        min-height: 1300px;
+    }
+
+    .right_content1 {
+        width: 100%;
+        padding: 10px 15px;
+    }
+
+
+    .bgWaves {
+        background-image: url('../../../assets/img/mobileWaves.png');
+        background-position: center;
+        background-size: cover;
+        background-repeat: no-repeat;
+        width: 100%;
+        min-height: 1200px;
+    }
+
+    .mobileWaves {
+        display: block;
+    }
+
+    .mobResponciveDiv {
+        position: absolute;
+        margin-top: 65px;
+    }
+
+  
+    .listImg2 {
+        height: 120px;
+        width: 120px;
+        background-size: 100% 100%;
+    }
+
+    .listImg3 {
+        height: 120px;
+        width: 120px;
+        background-size: 100% 100%;
+    }
+
+    .listImg4 {
+        height: 120px;
+        width: 120px;
+        background-size: 100% 100%;
+    }
+
+    .mainDiv2 {
+        background-color: #EBE1FF;
+        min-height: 700px;
+    }
+
+    .schoolGirlImg {
+        width: 22rem;
+        height: 22rem;
+        margin: auto;
+    }
+
+    .mainDiv2 .right_content1 {
+        padding: 10px 15px;
+    }
+
+    .pentemindgroupImg {
+        background-image: url('../../../assets/img/allMonkey.png');
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: 100% 100%;
+        /* width: 22rem; */
+        height:18rem;
+        margin-top: 320px;
+    }
+
+    .mobileView {
+        display: block;
+        width: 100%;
+        position: absolute;
+    }
+
+    .mainDiv3 {
+        background-color: #EBE1FF;
+        min-height: 720px;
+    }
+
+    .franchiseImg {
+        width: 17rem;
+        height: 17rem;
+        margin: auto;
+        float: none;
+    }
+
+    .desktopList {
+        display: none;
+    }
+
+    .mobileListDiv {
+        background-image: url('../../../assets/img/mobileWaves2.png');
+        background-repeat: no-repeat;
+        background-size: 100% 100%;
+        background-position: center;
+        width: 100%;
+        height: 1100px;
+        margin: auto;
+        display: block;
+    }
+
+    .mainDiv5 {
+        min-height: 1100px;
+    }
+
+    .faq_content {
+        padding: 0;
+    }
+
+    .dayCareContent1 {
+        margin-top: 10px;
+    }
+}
