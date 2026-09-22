@@ -16,7 +16,7 @@ permissions:
   security-events: write
 
 env:
-  # Node 24 is compatible with Angular 16 and is also suitable for
+  # Node 20 is compatible with Angular 16 and is also suitable for
   # most current Node.js projects.
   NODE_VERSION: "24"
   FLUTTER_VERSION: "stable"
@@ -86,6 +86,48 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ============================================================
+  # 3. SAST - SEMGREP
+  # ============================================================
+  sast:
+    name: 🛡️ SAST - Semgrep
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Semgrep
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install semgrep
+
+      - name: Run Semgrep
+        shell: bash
+        run: |
+          semgrep scan \
+            --config auto \
+            --error \
+            --exclude .git \
+            --exclude build \
+            --exclude node_modules \
+            --exclude .dart_tool \
+            --exclude ios/Pods \
+            --exclude android/.gradle \
+            --exclude android/app/.cxx \
+            --exclude .github \
+            --exclude '**/firebase_options.dart' \
+            --exclude 'lib/pages/notification/firebase_options.dart' \
+            --exclude 'web/sqflite_sw.js' \
+            --exclude 'ios/Runner/Info.plist' \
+            --exclude 'ios/Runner/Infomlzs.plist'
+
+  # ============================================================
   # 4. SONARQUBE CODE QUALITY & SECURITY
   # ============================================================
   sonarqube:
@@ -142,49 +184,6 @@ jobs:
             -Dsonar.exclusions=**/.git/**,**/build/**,**/node_modules/**,**/.dart_tool/**,**/ios/Pods/**,**/android/.gradle/**,**/android/app/.cxx/**,**/.github/**,**/firebase_options.dart,**/web/sqflite_sw.js,**/ios/Runner/Info.plist,**/ios/Runner/Infomlzs.plist,**/ios/install.sh,**/ios/Runner/Vuforia/**,**/Vuforia/**,**/VuforiaEngine.framework/**,**/*.framework/**,**/*.xcframework/**,**/*.a,**/*.dylib,**/*.so,**/*.aar,**/*.ipa,**/*.apk,**/*.aab,**/*.bin
 
   # ============================================================
-  # 3. SAST - SEMGREP
-  # ============================================================
-  sast:
-    name: 🛡️ SAST - Semgrep
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install Semgrep
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install semgrep
-
-      - name: Run Semgrep
-        shell: bash
-        run: |
-          semgrep scan \
-            --config auto \
-            --error \
-            --exclude .git \
-            --exclude build \
-            --exclude node_modules \
-            --exclude .dart_tool \
-            --exclude ios/Pods \
-            --exclude android/.gradle \
-            --exclude android/app/.cxx \
-            --exclude .github \
-            --exclude '**/firebase_options.dart' \
-            --exclude 'lib/pages/notification/firebase_options.dart' \
-            --exclude 'web/sqflite_sw.js' \
-            --exclude 'ios/Runner/Info.plist' \
-            --exclude 'ios/Runner/Infomlzs.plist'
-
-  
-  # ============================================================
   # 5. TRIVY DEPENDENCY / FILESYSTEM SCAN
   # ============================================================
   dependency-scan:
@@ -229,13 +228,13 @@ jobs:
       - name: Flutter version
         run: flutter --version
 
-      # # Authenticate GitHub so private Git dependencies can be cloned.
-      # - name: Configure GitHub authentication
-      #   if: ${{ secrets.REPO_TOKEN != '' }}
-      #   env:
-      #     REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
-      #   run: |
-      #     git config --global url."https://${REPO_TOKEN}@github.com/".insteadOf "https://github.com/"
+      # Authenticate GitHub so private Git dependencies can be cloned.
+      - name: Configure GitHub authentication
+        if: ${{ secrets.REPO_TOKEN != '' }}
+        env:
+          REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
+        run: |
+          git config --global url."https://${REPO_TOKEN}@github.com/".insteadOf "https://github.com/"
 
       - name: Get dependencies
         run: flutter pub get
@@ -265,11 +264,13 @@ jobs:
           fetch-depth: 1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+          package-manager-cache: false
 
+      # No package-lock.json exists in this repository, so do not enable
+      # setup-node npm dependency caching.
       - name: Install dependencies
         shell: bash
         run: |
@@ -364,11 +365,12 @@ jobs:
           fetch-depth: 1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+          package-manager-cache: false
 
+      # No package-lock.json exists in this repository, so npm install is used.
       - name: Install dependencies
         shell: bash
         run: |
