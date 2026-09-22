@@ -139,6 +139,7 @@ jobs:
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
             -Dsonar.exclusions=**/.git/**,**/build/**,**/node_modules/**,**/.dart_tool/**,**/ios/Pods/**,**/android/.gradle/**,**/android/app/.cxx/**,**/.github/**,**/firebase_options.dart,**/web/sqflite_sw.js,**/ios/Runner/Info.plist,**/ios/Runner/Infomlzs.plist,**/ios/install.sh,**/ios/Runner/Vuforia/**,**/Vuforia/**,**/VuforiaEngine.framework/**,**/*.framework/**,**/*.xcframework/**,**/*.a,**/*.dylib,**/*.so,**/*.aar,**/*.ipa,**/*.apk,**/*.aab,**/*.bin
 
   # ============================================================
