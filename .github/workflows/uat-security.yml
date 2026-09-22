@@ -1,10 +1,8 @@
 name: UAT - Code Quality & Security
-
 on:
   push:
     branches:
       - uat
-
   workflow_dispatch:
 
 # Prevent multiple scans for the same branch from running simultaneously.
@@ -22,26 +20,21 @@ env:
   PYTHON_VERSION: "3.14.7"
 
 jobs:
-
   # ============================================================
   # 1. DETECT PROJECT TYPE
   # ============================================================
-
   detect:
     name: Detect Project
     runs-on: ubuntu-latest
-
     outputs:
       flutter: ${{ steps.detect.outputs.flutter }}
       node: ${{ steps.detect.outputs.node }}
       angular: ${{ steps.detect.outputs.angular }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
       - name: Detect technologies
         id: detect
         shell: bash
@@ -67,17 +60,14 @@ jobs:
   # ============================================================
   # 2. SECRET SCANNING
   # ============================================================
-
   secret-scan:
     name: 🔐 Secret Scan - Gitleaks
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
@@ -86,22 +76,18 @@ jobs:
   # ============================================================
   # 3. SAST - SEMGREP
   # ============================================================
-
   sast:
     name: 🛡️ SAST - Semgrep
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
       - name: Install Semgrep
         run: |
           python -m pip install --upgrade pip
@@ -116,28 +102,71 @@ jobs:
             --exclude node_modules \
             --exclude .dart_tool \
             --exclude ios/Pods \
-            --exclude android/.gradle\
-            --exclude '**/firebase_options.dart'\
-            --exclude lib/pages/notification/firebase_options.dart\
+            --exclude android/.gradle \
+            --exclude '**/firebase_options.dart' \
+            --exclude lib/pages/notification/firebase_options.dart \
             --exclude .github \
-            --exclude web/sqflite_sw.js\
-            --exclude ios/Runner/Info.plist\
-            --exclude ios/Runner/Infomlzs.plist\
-            --exclude android/app/.cxx
+            --exclude web/sqflite_sw.js \
+            --exclude ios/Runner/Info.plist \
+            --exclude ios/Runner/Infomlzs.plist \
+            --exclude android/app/.cxx 
   # ============================================================
-  # 4. TRIVY DEPENDENCY / FILESYSTEM SCAN
+  # 4. SONARQUBE CODE QUALITY & SECURITY
+  # Fixed: Reads from secrets for Host URL and Project Key
   # ============================================================
+  sonarqube:
+    name: 📊 SonarQube Quality Gate
+    needs:
+      - sast
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history improves SonarQube blame/new-code analysis.
+          fetch-depth: 0
 
+      - name: Validate SonarQube configuration
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY || secrets.SONAR_HOST_URL && 'eKidzeeAppAutomation' }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "❌ Missing GitHub secret: SONAR_TOKEN"
+            exit 1
+          fi
+          if [ -z "$SONAR_HOST_URL" ]; then
+            echo "❌ Missing GitHub secret: SONAR_HOST_URL"
+            exit 1
+          fi
+          echo "✅ SonarQube configuration found."
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v8
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.projectName=eKidzeeAppAutomation
+            -Dsonar.sources=.
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
+            -Dsonar.exclusions=**/.git/**,**/build/**,**/node_modules/**,**/.dart_tool/**,**/ios/Pods/**,**/android/.gradle/**,**/android/app/.cxx/**,**/.github/**,**/firebase_options.dart,**/web/sqflite_sw.js,**/ios/Runner/Info.plist,**/ios/Runner/Infomlzs.plist,**/ios/install.sh,**/ios/Runner/Vuforia,**/ios/Runner/Infomlzs.plist,**/Vuforia/**,\**/VuforiaEngine.framework/**,\**/*.framework/**,\**/*.xcframework/**,\**/*.a,\**/*.dylib,\**/*.so,\**/*.aar,\**/*.ipa,\**/*.apk,\**/*.aab,\**/*.bin
+  # ============================================================
+  # 5. TRIVY DEPENDENCY / FILESYSTEM SCAN
+  # ============================================================
   dependency-scan:
     name: 📦 Dependency Scan - Trivy
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
       - name: Run Trivy
         uses: aquasecurity/trivy-action@master
         with:
@@ -149,29 +178,23 @@ jobs:
           exit-code: "1"
 
   # ============================================================
-  # 5. FLUTTER / DART
+  # 6. FLUTTER / DART
   # ============================================================
-
   flutter:
     name: 📱 Flutter Quality
     needs: detect
     if: needs.detect.outputs.flutter == 'true'
-
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: ${{ env.FLUTTER_VERSION }}
           cache: true
-
       - name: Flutter version
         run: flutter --version
-
       # Authenticate GitHub so private Git dependencies
       # such as ZeeLearnLtd/pageddatatable can be cloned.
       - name: Configure GitHub authentication
@@ -179,38 +202,30 @@ jobs:
           git config --global url."https://${{ secrets.REPO_TOKEN }}@github.com/".insteadOf "https://github.com/"
       - name: Get dependencies
         run: flutter pub get
-
       - name: Check outdated dependencies
         continue-on-error: true
         run: flutter pub outdated
-
       - name: Analyze Dart code
         run: flutter analyze
-
       - name: Run Flutter tests
         run: flutter test
 
   # ============================================================
-  # 6. NODE / ANGULAR
+  # 7. NODE / ANGULAR
   # ============================================================
-
   node:
     name: 🟢 Node.js / Angular Quality
     needs: detect
     if: needs.detect.outputs.node == 'true'
-
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
@@ -221,7 +236,6 @@ jobs:
       # --------------------------------------------------------
       # ESLint
       # --------------------------------------------------------
-
       - name: ESLint
         shell: bash
         run: |
@@ -233,7 +247,6 @@ jobs:
       # --------------------------------------------------------
       # TypeScript
       # --------------------------------------------------------
-
       - name: TypeScript validation
         shell: bash
         run: |
@@ -245,7 +258,6 @@ jobs:
       # --------------------------------------------------------
       # Unit Tests
       # --------------------------------------------------------
-
       - name: Run tests
         shell: bash
         run: |
@@ -257,37 +269,31 @@ jobs:
       # --------------------------------------------------------
       # NPM SECURITY
       # --------------------------------------------------------
-
       - name: NPM audit
         run: |
           npm audit \
             --audit-level=high \
             --omit=dev
   # ============================================================
-  # 7. ANGULAR BUILD
+  # 8. ANGULAR BUILD
   # ============================================================
-
   angular-build:
     name: 🅰️ Angular Build
     needs:
       - detect
       - node
-
     if: |
       needs.detect.outputs.angular == 'true' &&
       needs.node.result == 'success'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
@@ -297,22 +303,18 @@ jobs:
           fi
       - name: Install Angular CLI
         run: npm install -g @angular/cli
-
       - name: Angular Build
         run: ng build
 
   # ============================================================
-  # 8. LICENSE / DEPENDENCY POLICY
+  # 9. LICENSE / DEPENDENCY POLICY
   # ============================================================
-
   dependency-policy:
     name: 📜 Dependency Policy
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Check package files
         shell: bash
         run: |
@@ -328,27 +330,23 @@ jobs:
           fi
           echo "Dependency policy check completed."
   # ============================================================
-  # 9. UAT SECURITY SUMMARY
+  # 10. UAT SECURITY SUMMARY
   # ============================================================
-
   uat-summary:
     name: 🚦 UAT Security Gate
     needs:
       - detect
       - secret-scan
       - sast
+      - sonarqube
       - dependency-scan
       - flutter
       - node
       - angular-build
       - dependency-policy
-
     if: always()
-
     runs-on: ubuntu-latest
-
     steps:
-
       - name: Evaluate security results
         shell: bash
         run: |
@@ -356,7 +354,8 @@ jobs:
           echo "       UAT SECURITY SUMMARY"
           echo "=========================================="
           echo "Secret Scan       : ${{ needs.secret-scan.result }}"
-          echo "SAST              : ${{ needs.sast.result }}"
+          echo "Semgrep SAST      : ${{ needs.sast.result }}"
+          echo "SonarQube         : ${{ needs.sonarqube.result }}"
           echo "Dependency Scan   : ${{ needs.dependency-scan.result }}"
           echo "Flutter           : ${{ needs.flutter.result }}"
           echo "Node.js           : ${{ needs.node.result }}"
@@ -368,6 +367,9 @@ jobs:
             FAILED=true
           fi
           if [[ "${{ needs.sast.result }}" == "failure" ]]; then
+            FAILED=true
+          fi
+          if [[ "${{ needs.sonarqube.result }}" == "failure" ]]; then
             FAILED=true
           fi
           if [[ "${{ needs.dependency-scan.result }}" == "failure" ]]; then
@@ -382,6 +384,9 @@ jobs:
           if [[ "${{ needs.angular-build.result }}" == "failure" ]]; then
             FAILED=true
           fi
+          if [[ "${{ needs.dependency-policy.result }}" == "failure" ]]; then
+            FAILED=true
+          fi
           if [[ "$FAILED" == "true" ]]; then
             echo ""
             echo "❌ UAT SECURITY GATE FAILED"
@@ -392,3 +397,4 @@ jobs:
           echo ""
           echo "✅ UAT SECURITY GATE PASSED"
           echo ""
+
