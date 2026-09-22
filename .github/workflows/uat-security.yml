@@ -100,49 +100,25 @@ jobs:
           # Full history improves SonarQube blame/new-code analysis.
           fetch-depth: 0
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-      - name: Validate SonarQube configuration
-        shell: bash
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-          SONAR_PROJECT_KEY: ${{ secrets.SONAR_PROJECT_KEY }}
-        run: |
-          set -e
-
-          if [ -z "$SONAR_TOKEN" ]; then
-            echo "❌ Missing GitHub secret: SONAR_TOKEN"
-            exit 1
-          fi
-
-          if [ -z "$SONAR_HOST_URL" ]; then
-            echo "❌ Missing GitHub secret: SONAR_HOST_URL"
-            exit 1
-          fi
-
-          if [ -z "$SONAR_PROJECT_KEY" ]; then
-            echo "❌ Missing GitHub secret: SONAR_PROJECT_KEY"
-            exit 1
-          fi
-
-          echo "✅ SonarQube configuration found."
-
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
-        
+        with:
+          args: |
+            -Dsonar.organization=zeelearn
+            -Dsonar.projectKey=zeelearn
+            -Dsonar.projectName=eKidzeeAppAutomation
+            -Dsonar.sources=.
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.qualitygate.wait=true
+            -Dsonar.qualitygate.timeout=300
+            -Dsonar.exclusions=**/.git/**,**/build/**,**/node_modules/**,**/.dart_tool/**,**/ios/Pods/**,**/android/.gradle/**,**/android/app/.cxx/**,**/.github/**,**/firebase_options.dart,**/web/sqflite_sw.js,**/ios/Runner/Info.plist,**/ios/Runner/Infomlzs.plist,**/ios/install.sh,**/ios/Runner/Vuforia/**,**/Vuforia/**,**/VuforiaEngine.framework/**,**/*.framework/**,**/*.xcframework/**,**/*.a,**/*.dylib,**/*.so,**/*.aar,**/*.ipa,**/*.apk,**/*.aab,**/*.bin
+
   # ============================================================
   # 4. SAST - SEMGREP
   # ============================================================
-  # IMPORTANT:
-  # Semgrep starts only after SonarQube has completed successfully.
   sast:
     name: 🛡️ SAST - Semgrep
     needs:
@@ -232,7 +208,6 @@ jobs:
       - name: Flutter version
         run: flutter --version
 
-      
       - name: Get dependencies
         run: flutter pub get
 
@@ -267,8 +242,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
 
-      # No package-lock.json exists in this repository,
-      # so setup-node npm dependency caching is disabled.
       - name: Install dependencies
         shell: bash
         run: |
@@ -280,9 +253,6 @@ jobs:
             npm install
           fi
 
-      # --------------------------------------------------------
-      # ESLint
-      # --------------------------------------------------------
       - name: ESLint
         shell: bash
         run: |
@@ -290,37 +260,21 @@ jobs:
 
           echo "Checking ESLint configuration..."
 
-          # Angular projects require a configured lint target
-          # before "ng lint" can be executed.
-          #
-          # Having this in package.json:
-          #
-          #   "lint": "ng lint"
-          #
-          # does NOT mean Angular has a lint target.
-          #
-          # Therefore, check angular.json first.
-
           if [ -f angular.json ] && \
              node -e "
                const fs = require('fs');
-
                const a = JSON.parse(
                  fs.readFileSync('angular.json', 'utf8')
                );
-
                const projects = a.projects || {};
-
                const hasLint = Object.values(projects).some(
                  p => p.architect?.lint || p.targets?.lint
                );
-
                process.exit(hasLint ? 0 : 1);
              "; then
 
             echo "Angular lint target found."
             echo "Running Angular lint..."
-
             npx ng lint
 
           elif [ -f "eslint.config.js" ] || \
@@ -332,7 +286,6 @@ jobs:
 
             echo "Standalone ESLint configuration found."
             echo "Running ESLint..."
-
             npx eslint . --max-warnings=0
 
           else
@@ -342,9 +295,6 @@ jobs:
 
           fi
 
-      # --------------------------------------------------------
-      # TypeScript
-      # --------------------------------------------------------
       - name: TypeScript validation
         shell: bash
         run: |
@@ -356,9 +306,6 @@ jobs:
             echo "No tsconfig.json found. Skipping."
           fi
 
-      # --------------------------------------------------------
-      # Unit Tests
-      # --------------------------------------------------------
       - name: Run tests
         shell: bash
         run: |
@@ -370,9 +317,6 @@ jobs:
             echo "No test script found. Skipping."
           fi
 
-      # --------------------------------------------------------
-      # NPM SECURITY
-      # --------------------------------------------------------
       - name: NPM audit
         shell: bash
         run: |
@@ -409,8 +353,6 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
 
-      # No package-lock.json exists in this repository,
-      # so npm install is used.
       - name: Install dependencies
         shell: bash
         run: |
@@ -502,16 +444,16 @@ jobs:
         shell: bash
         run: |
           echo "=========================================="
-          echo "       UAT SECURITY SUMMARY"
+          echo "        UAT SECURITY SUMMARY"
           echo "=========================================="
 
-          echo "Secret Scan       : ${{ needs.secret-scan.result }}"
-          echo "Semgrep SAST      : ${{ needs.sast.result }}"
-          echo "SonarQube         : ${{ needs.sonarqube.result }}"
-          echo "Dependency Scan   : ${{ needs.dependency-scan.result }}"
-          echo "Flutter           : ${{ needs.flutter.result }}"
-          echo "Node.js           : ${{ needs.node.result }}"
-          echo "Angular Build     : ${{ needs.angular-build.result }}"
+          echo "Secret Scan        : ${{ needs.secret-scan.result }}"
+          echo "Semgrep SAST       : ${{ needs.sast.result }}"
+          echo "SonarQube          : ${{ needs.sonarqube.result }}"
+          echo "Dependency Scan    : ${{ needs.dependency-scan.result }}"
+          echo "Flutter            : ${{ needs.flutter.result }}"
+          echo "Node.js            : ${{ needs.node.result }}"
+          echo "Angular Build      : ${{ needs.angular-build.result }}"
           echo "Dependency Policy : ${{ needs.dependency-policy.result }}"
 
           echo "=========================================="
