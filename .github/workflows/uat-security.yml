@@ -16,24 +16,24 @@ permissions:
   security-events: write
 
 env:
-  # Node 20 is compatible with Angular 16 and is also suitable for
-  # most current Node.js projects.
   NODE_VERSION: "24"
   FLUTTER_VERSION: "stable"
-  # Semgrep has broader compatibility on Python 3.12 than 3.14.
   PYTHON_VERSION: "3.12"
 
 jobs:
+
   # ============================================================
   # 1. DETECT PROJECT TYPE
   # ============================================================
   detect:
     name: Detect Project
     runs-on: ubuntu-latest
+
     outputs:
       flutter: ${{ steps.detect.outputs.flutter }}
       node: ${{ steps.detect.outputs.node }}
       angular: ${{ steps.detect.outputs.angular }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -74,6 +74,7 @@ jobs:
   secret-scan:
     name: 🔐 Secret Scan - Gitleaks
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -86,55 +87,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # ============================================================
-  # 3. SAST - SEMGREP
-  # ============================================================
-  sast:
-    name: 🛡️ SAST - Semgrep
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install Semgrep
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install semgrep
-
-      - name: Run Semgrep
-        shell: bash
-        run: |
-          semgrep scan \
-            --config auto \
-            --error \
-            --exclude .git \
-            --exclude build \
-            --exclude node_modules \
-            --exclude .dart_tool \
-            --exclude ios/Pods \
-            --exclude android/.gradle \
-            --exclude android/app/.cxx \
-            --exclude .github \
-            --exclude '**/firebase_options.dart' \
-            --exclude 'lib/pages/notification/firebase_options.dart' \
-            --exclude 'web/sqflite_sw.js' \
-            --exclude 'ios/Runner/Info.plist' \
-            --exclude 'ios/Runner/Infomlzs.plist'
-
-  # ============================================================
-  # 4. SONARQUBE CODE QUALITY & SECURITY
+  # 3. SONARQUBE CODE QUALITY & SECURITY
   # ============================================================
   sonarqube:
     name: 📊 SonarQube Quality Gate
-    needs:
-      - sast
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -184,11 +142,59 @@ jobs:
             -Dsonar.exclusions=**/.git/**,**/build/**,**/node_modules/**,**/.dart_tool/**,**/ios/Pods/**,**/android/.gradle/**,**/android/app/.cxx/**,**/.github/**,**/firebase_options.dart,**/web/sqflite_sw.js,**/ios/Runner/Info.plist,**/ios/Runner/Infomlzs.plist,**/ios/install.sh,**/ios/Runner/Vuforia/**,**/Vuforia/**,**/VuforiaEngine.framework/**,**/*.framework/**,**/*.xcframework/**,**/*.a,**/*.dylib,**/*.so,**/*.aar,**/*.ipa,**/*.apk,**/*.aab,**/*.bin
 
   # ============================================================
+  # 4. SAST - SEMGREP
+  # ============================================================
+  # IMPORTANT:
+  # Semgrep starts only after SonarQube has completed successfully.
+  sast:
+    name: 🛡️ SAST - Semgrep
+    needs:
+      - sonarqube
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Semgrep
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install semgrep
+
+      - name: Run Semgrep
+        shell: bash
+        run: |
+          semgrep scan \
+            --config auto \
+            --error \
+            --exclude .git \
+            --exclude build \
+            --exclude node_modules \
+            --exclude .dart_tool \
+            --exclude ios/Pods \
+            --exclude android/.gradle \
+            --exclude android/app/.cxx \
+            --exclude .github \
+            --exclude '**/firebase_options.dart' \
+            --exclude 'lib/pages/notification/firebase_options.dart' \
+            --exclude 'web/sqflite_sw.js' \
+            --exclude 'ios/Runner/Info.plist' \
+            --exclude 'ios/Runner/Infomlzs.plist'
+
+  # ============================================================
   # 5. TRIVY DEPENDENCY / FILESYSTEM SCAN
   # ============================================================
   dependency-scan:
     name: 📦 Dependency Scan - Trivy
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -213,6 +219,7 @@ jobs:
     needs: detect
     if: needs.detect.outputs.flutter == 'true'
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -228,6 +235,7 @@ jobs:
       - name: Flutter version
         run: flutter --version
 
+      
       - name: Get dependencies
         run: flutter pub get
 
@@ -249,6 +257,7 @@ jobs:
     needs: detect
     if: needs.detect.outputs.node == 'true'
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -261,8 +270,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
 
-      # No package-lock.json exists in this repository, so do not enable
-      # setup-node npm dependency caching.
+      # No package-lock.json exists in this repository,
+      # so setup-node npm dependency caching is disabled.
       - name: Install dependencies
         shell: bash
         run: |
@@ -284,19 +293,56 @@ jobs:
 
           echo "Checking ESLint configuration..."
 
-          if node -e "const p=require('./package.json'); process.exit(p.scripts?.lint ? 0 : 1)" 2>/dev/null; then
-            echo "Running configured npm lint script..."
-            npm run lint
+          # Angular projects require a configured lint target
+          # before "ng lint" can be executed.
+          #
+          # Having this in package.json:
+          #
+          #   "lint": "ng lint"
+          #
+          # does NOT mean Angular has a lint target.
+          #
+          # Therefore, check angular.json first.
+
+          if [ -f angular.json ] && \
+             node -e "
+               const fs = require('fs');
+
+               const a = JSON.parse(
+                 fs.readFileSync('angular.json', 'utf8')
+               );
+
+               const projects = a.projects || {};
+
+               const hasLint = Object.values(projects).some(
+                 p => p.architect?.lint || p.targets?.lint
+               );
+
+               process.exit(hasLint ? 0 : 1);
+             "; then
+
+            echo "Angular lint target found."
+            echo "Running Angular lint..."
+
+            npx ng lint
+
           elif [ -f "eslint.config.js" ] || \
                [ -f "eslint.config.mjs" ] || \
                [ -f "eslint.config.cjs" ] || \
                [ -f ".eslintrc.json" ] || \
                [ -f ".eslintrc.js" ] || \
                [ -f ".eslintrc.cjs" ]; then
-            echo "ESLint configuration found. Running ESLint..."
+
+            echo "Standalone ESLint configuration found."
+            echo "Running ESLint..."
+
             npx eslint . --max-warnings=0
+
           else
-            echo "No ESLint configuration found. Skipping ESLint."
+
+            echo "No ESLint configuration or Angular lint target found."
+            echo "Skipping ESLint."
+
           fi
 
       # --------------------------------------------------------
@@ -334,6 +380,7 @@ jobs:
         shell: bash
         run: |
           set -e
+
           npm audit \
             --audit-level=high \
             --omit=dev
@@ -346,10 +393,13 @@ jobs:
     needs:
       - detect
       - node
+
     if: |
       needs.detect.outputs.angular == 'true' &&
       needs.node.result == 'success'
+
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -362,7 +412,8 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           package-manager-cache: false
 
-      # No package-lock.json exists in this repository, so npm install is used.
+      # No package-lock.json exists in this repository,
+      # so npm install is used.
       - name: Install dependencies
         shell: bash
         run: |
@@ -400,6 +451,7 @@ jobs:
   dependency-policy:
     name: 📜 Dependency Policy
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -432,6 +484,7 @@ jobs:
   # ============================================================
   uat-summary:
     name: 🚦 UAT Security Gate
+
     needs:
       - detect
       - secret-scan
@@ -442,8 +495,11 @@ jobs:
       - node
       - angular-build
       - dependency-policy
+
     if: always()
+
     runs-on: ubuntu-latest
+
     steps:
       - name: Evaluate security results
         shell: bash
@@ -451,6 +507,7 @@ jobs:
           echo "=========================================="
           echo "       UAT SECURITY SUMMARY"
           echo "=========================================="
+
           echo "Secret Scan       : ${{ needs.secret-scan.result }}"
           echo "Semgrep SAST      : ${{ needs.sast.result }}"
           echo "SonarQube         : ${{ needs.sonarqube.result }}"
@@ -459,6 +516,7 @@ jobs:
           echo "Node.js           : ${{ needs.node.result }}"
           echo "Angular Build     : ${{ needs.angular-build.result }}"
           echo "Dependency Policy : ${{ needs.dependency-policy.result }}"
+
           echo "=========================================="
 
           FAILED=false
