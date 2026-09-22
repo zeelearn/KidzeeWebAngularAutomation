@@ -223,9 +223,9 @@ jobs:
         uses: actions/checkout@v4
       - name: Setup Node.js
         uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
+        # with:
+        #   node-version: ${{ env.NODE_VERSION }}
+        #   cache: npm
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
