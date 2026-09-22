@@ -136,9 +136,9 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: https://sonarcloud.io  # Explicitly set SonarCloud host
+          SONAR_HOST_URL: https://sonarcloud.io
         with:
-          args: >
+          args: |
             -Dsonar.projectKey=zeelearn
             -Dsonar.organization=zeelearn
             -Dsonar.projectName=eKidzeeAppAutomation
