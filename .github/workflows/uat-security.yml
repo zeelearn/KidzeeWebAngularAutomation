@@ -108,8 +108,8 @@ jobs:
         with:
           args: |
             -Dsonar.organization=zeelearn
-            -Dsonar.projectKey=zeelearn
-            -Dsonar.projectName=eKidzeeAppAutomation
+            -Dsonar.projectKey=zeelearn_KidzeeWebAngularAutomation
+            -Dsonar.projectName=KidzeeWebAngularAutomation
             -Dsonar.sources=.
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.qualitygate.wait=true
