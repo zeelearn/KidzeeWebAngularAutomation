@@ -108,7 +108,7 @@ jobs:
         with:
           args: |
             -Dsonar.organization=zeelearn
-            -Dsonar.projectKey=zeelearn
+            -Dsonar.projectKey=zeelearn_KidzeeWebAngularAutomation  # <-- Update to your actual SonarCloud project key
             -Dsonar.projectName=KidzeeWebAngularAutomation
             -Dsonar.sources=.
             -Dsonar.sourceEncoding=UTF-8
