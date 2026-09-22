@@ -139,8 +139,8 @@ jobs:
           SONAR_HOST_URL: https://sonarcloud.io  # Explicitly set SonarCloud host
         with:
           args: >
-            -Dsonar.projectKey=YOUR_ACTUAL_PROJECT_KEY
-            -Dsonar.organization=YOUR_ACTUAL_ORG_KEY
+            -Dsonar.projectKey=zeelearn
+            -Dsonar.organization=zeelearn
             -Dsonar.projectName=eKidzeeAppAutomation
             -Dsonar.sources=.
             -Dsonar.sourceEncoding=UTF-8
