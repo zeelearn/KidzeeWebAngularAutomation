@@ -86,6 +86,9 @@ jobs:
   # ============================================================
   # 3. SONARQUBE CODE QUALITY & SECURITY
   # ============================================================
+  # ============================================================
+  # 3. SONARQUBE CODE QUALITY & SECURITY
+  # ============================================================
   sonarqube:
     name: 📊 SonarCloud Quality Gate
     runs-on: ubuntu-latest
@@ -123,20 +126,27 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run SonarCloud Scan via NPM
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.host.url=https://sonarcloud.io/
-            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
-            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
-            -Dsonar.projectName=${{ env.SONAR_PROJECT_NAME }}
-            -Dsonar.sources=src
-            -Dsonar.sourceEncoding=UTF-8
-            -Dsonar.qualitygate.wait=true
-            -Dsonar.qualitygate.timeout=300
+        run: |
+          npx @sonar/scan \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }} \
+            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }} \
+            -Dsonar.projectName=${{ env.SONAR_PROJECT_NAME }} \
+            -Dsonar.sources=src \
+            -Dsonar.sourceEncoding=UTF-8 \
+            -Dsonar.qualitygate.wait=true \
+            -Dsonar.qualitygate.timeout=300 \
             -Dsonar.exclusions=**/.git/**,**/build/**,**/node_modules/**,dist/**,**/.github/**
 
   # ============================================================
