@@ -89,6 +89,9 @@ jobs:
   # ============================================================
   # 3. SONARQUBE CODE QUALITY & SECURITY
   # ============================================================
+  # ============================================================
+  # 3. SONARQUBE CODE QUALITY & SECURITY
+  # ============================================================
   sonarqube:
     name: 📊 SonarCloud Quality Gate
     runs-on: ubuntu-latest
@@ -131,14 +134,11 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Install dependencies
-        run: npm ci
-
       - name: Run SonarCloud Scan via NPM
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          npx @sonar/scan \
+          npx --yes @sonar/scan \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.organization=${{ env.SONAR_ORGANIZATION }} \
             -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }} \
@@ -149,6 +149,7 @@ jobs:
             -Dsonar.qualitygate.timeout=300 \
             -Dsonar.exclusions=**/.git/**,**/build/**,**/node_modules/**,dist/**,**/.github/**
 
+            
   # ============================================================
   # 4. SAST - SEMGREP
   # ============================================================
