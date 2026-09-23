@@ -100,8 +100,6 @@ jobs:
       SONAR_PROJECT_NAME: KidzeeWebAngularAutomation
   
     steps:
-      
-  
       - name: Validate SonarCloud configuration
         shell: bash
         env:
@@ -114,9 +112,15 @@ jobs:
             exit 1
           fi
   
+          if [ -z "$SONAR_ORGANIZATION" ] || [ -z "$SONAR_PROJECT_KEY" ]; then
+            echo "::error::SonarCloud project configuration is empty"
+            exit 1
+          fi
+  
           echo "SONAR_TOKEN is present"
           echo "Organization: $SONAR_ORGANIZATION"
           echo "Project key: $SONAR_PROJECT_KEY"
+  
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -129,14 +133,15 @@ jobs:
           SONAR_HOST_URL: https://sonarcloud.io
         with:
           args: >
-            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
-            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
-            -Dsonar.projectName=${{ secrets.SONAR_PROJECT_NAME }}
+            -Dsonar.organization=${{ env.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ env.SONAR_PROJECT_KEY }}
+            -Dsonar.projectName=${{ env.SONAR_PROJECT_NAME }}
             -Dsonar.sources=.
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
             -Dsonar.exclusions=**/.git/**,**/build/**,**/node_modules/**,**/.dart_tool/**,**/ios/Pods/**,**/android/.gradle/**,**/android/app/.cxx/**,**/.github/**
+            
   # ============================================================
   # 4. SAST - SEMGREP
   # ============================================================
