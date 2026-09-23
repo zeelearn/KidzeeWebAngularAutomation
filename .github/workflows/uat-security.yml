@@ -91,29 +91,36 @@ jobs:
   # ============================================================
   
   sonarqube:
-    name: 📊 SonarQube Quality Gate
+    name: 📊 SonarCloud Quality Gate
     runs-on: ubuntu-latest
-
+  
+    env:
+      SONAR_ORGANIZATION: zeelearn
+      SONAR_PROJECT_KEY: zeelearn_KidzeeWebAngularAutomation
+      SONAR_PROJECT_NAME: KidzeeWebAngularAutomation
+  
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+  
       - name: Validate SonarCloud configuration
         shell: bash
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
+          set -euo pipefail
+  
           if [ -z "$SONAR_TOKEN" ]; then
-            echo "::error::SONAR_TOKEN is missing or unavailable for this workflow"
+            echo "::error::SONAR_TOKEN is missing or unavailable"
             exit 1
           fi
-      
+  
           echo "SONAR_TOKEN is present"
-          echo "Organization: zeelearn"
-          echo "Project key: zeelearn_KidzeeWebAngularAutomation"
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          # Full history improves SonarQube blame/new-code analysis.
-          fetch-depth: 0
-
+          echo "Organization: $SONAR_ORGANIZATION"
+          echo "Project key: $SONAR_PROJECT_KEY"
+  
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5
         env:
@@ -121,15 +128,14 @@ jobs:
           SONAR_HOST_URL: https://sonarcloud.io
         with:
           args: >
-            -Dsonar.organization=zeelearn
-            -Dsonar.projectKey=zeelearn_KidzeeWebAngularAutomation
-            -Dsonar.projectName=KidzeeWebAngularAutomation
+            -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.projectName=${{ secrets.SONAR_PROJECT_NAME }}
             -Dsonar.sources=.
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
-            -Dsonar.exclusions=**/.git/**,**/build/**,**/node_modules/**,**/.dart_tool/**,**/ios/Pods/**,**/android/.gradle/**,**/android/app/.cxx/**,**/.github/**,**/firebase_options.dart,**/web/sqflite_sw.js,**/ios/Runner/Info.plist,**/ios/Runner/Infomlzs.plist,**/ios/install.sh,**/ios/Runner/Vuforia/**,**/Vuforia/**,**/VuforiaEngine.framework/**,**/*.framework,**/*.xcframework,**/*.a,**/*.dylib,**/*.so,**/*.aar,**/*.ipa,**/*.apk,**/*.aab,**/*.bin
-
+            -Dsonar.exclusions=**/.git/**,**/build/**,**/node_modules/**,**/.dart_tool/**,**/ios/Pods/**,**/android/.gradle/**,**/android/app/.cxx/**,**/.github/**
   # ============================================================
   # 4. SAST - SEMGREP
   # ============================================================
