@@ -21,19 +21,16 @@ env:
   PYTHON_VERSION: "3.12"
 
 jobs:
-
   # ============================================================
   # 1. DETECT PROJECT TYPE
   # ============================================================
   detect:
     name: Detect Project
     runs-on: ubuntu-latest
-
     outputs:
       flutter: ${{ steps.detect.outputs.flutter }}
       node: ${{ steps.detect.outputs.node }}
       angular: ${{ steps.detect.outputs.angular }}
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,23 +44,18 @@ jobs:
           flutter=false
           node=false
           angular=false
-
           if [ -f "pubspec.yaml" ]; then
             flutter=true
           fi
-
           if [ -f "package.json" ]; then
             node=true
           fi
-
           if [ -f "angular.json" ]; then
             angular=true
           fi
-
           echo "flutter=$flutter" >> "$GITHUB_OUTPUT"
           echo "node=$node" >> "$GITHUB_OUTPUT"
           echo "angular=$angular" >> "$GITHUB_OUTPUT"
-
           echo "Flutter: $flutter"
           echo "Node.js: $node"
           echo "Angular: $angular"
@@ -74,12 +66,12 @@ jobs:
   secret-scan:
     name: 🔐 Secret Scan - Gitleaks
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
       - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
@@ -94,7 +86,6 @@ jobs:
   # ============================================================
   # 3. SONARQUBE CODE QUALITY & SECURITY
   # ============================================================
-  
   sonarqube:
     name: 📊 SonarCloud Quality Gate
     runs-on: ubuntu-latest
@@ -102,7 +93,6 @@ jobs:
       SONAR_ORGANIZATION: zeelearn
       SONAR_PROJECT_KEY: zeelearn_KidzeeWebAngularAutomation
       SONAR_PROJECT_NAME: KidzeeWebAngularAutomation
-
     steps:
       - name: Validate SonarCloud configuration
         shell: bash
@@ -110,17 +100,14 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           set -euo pipefail
-
           if [ -z "$SONAR_TOKEN" ]; then
             echo "::error::SONAR_TOKEN is missing or unavailable in secrets"
             exit 1
           fi
-
           if [ -z "$SONAR_ORGANIZATION" ] || [ -z "$SONAR_PROJECT_KEY" ]; then
             echo "::error::SonarCloud project configuration is empty"
             exit 1
           fi
-
           echo "SONAR_TOKEN is present"
           echo "Organization: $SONAR_ORGANIZATION"
           echo "Project key: $SONAR_PROJECT_KEY"
@@ -129,7 +116,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          
+
       - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
@@ -137,7 +124,7 @@ jobs:
           java-version: '21'
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@v3
+        uses: SonarSource/sonarcloud-github-action@v4
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
@@ -150,9 +137,8 @@ jobs:
             -Dsonar.sourceEncoding=UTF-8
             -Dsonar.qualitygate.wait=true
             -Dsonar.qualitygate.timeout=300
-            -Dsonar.exclusions=**/.git/**,**/build/**,**/node_modules/**,dist/**,**/.github/**   
+            -Dsonar.exclusions=**/.git/**,**/build/**,**/node_modules/**,dist/**,**/.github/**
 
-            
   # ============================================================
   # 4. SAST - SEMGREP
   # ============================================================
@@ -161,7 +147,6 @@ jobs:
     needs:
       - sonarqube
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -204,7 +189,6 @@ jobs:
   dependency-scan:
     name: 📦 Dependency Scan - Trivy
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -229,7 +213,6 @@ jobs:
     needs: detect
     if: needs.detect.outputs.flutter == 'true'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -266,7 +249,6 @@ jobs:
     needs: detect
     if: needs.detect.outputs.node == 'true'
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -274,16 +256,15 @@ jobs:
           fetch-depth: 1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          package-manager-cache: false
+          cache: 'npm'
 
       - name: Install dependencies
         shell: bash
         run: |
           set -e
-
           if [ -f package-lock.json ]; then
             npm ci
           else
@@ -294,9 +275,7 @@ jobs:
         shell: bash
         run: |
           set -e
-
           echo "Checking ESLint configuration..."
-
           if [ -f angular.json ] && \
              node -e "
                const fs = require('fs');
@@ -309,34 +288,27 @@ jobs:
                );
                process.exit(hasLint ? 0 : 1);
              "; then
-
             echo "Angular lint target found."
             echo "Running Angular lint..."
             npx ng lint
-
           elif [ -f "eslint.config.js" ] || \
                [ -f "eslint.config.mjs" ] || \
                [ -f "eslint.config.cjs" ] || \
                [ -f ".eslintrc.json" ] || \
                [ -f ".eslintrc.js" ] || \
                [ -f ".eslintrc.cjs" ]; then
-
             echo "Standalone ESLint configuration found."
             echo "Running ESLint..."
             npx eslint . --max-warnings=0
-
           else
-
             echo "No ESLint configuration or Angular lint target found."
             echo "Skipping ESLint."
-
           fi
 
       - name: TypeScript validation
         shell: bash
         run: |
           set -e
-
           if [ -f tsconfig.json ]; then
             npx tsc --noEmit
           else
@@ -347,7 +319,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           if node -e "const p=require('./package.json'); process.exit(p.scripts?.test ? 0 : 1)" 2>/dev/null; then
             npm test -- --watch=false
           else
@@ -358,7 +329,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           npm audit \
             --audit-level=high \
             --omit=dev
@@ -371,13 +341,10 @@ jobs:
     needs:
       - detect
       - node
-
     if: |
       needs.detect.outputs.angular == 'true' &&
       needs.node.result == 'success'
-
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -385,16 +352,15 @@ jobs:
           fetch-depth: 1
 
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          package-manager-cache: false
+          cache: 'npm'
 
       - name: Install dependencies
         shell: bash
         run: |
           set -e
-
           if [ -f package-lock.json ]; then
             npm ci
           else
@@ -414,7 +380,6 @@ jobs:
         shell: bash
         run: |
           set -e
-
           if [ -x "./node_modules/.bin/ng" ]; then
             ./node_modules/.bin/ng build
           else
@@ -427,7 +392,6 @@ jobs:
   dependency-policy:
     name: 📜 Dependency Policy
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -438,21 +402,16 @@ jobs:
         shell: bash
         run: |
           set -e
-
           echo "Checking dependency manifests..."
-
           if [ -f package.json ]; then
             echo "Node.js package detected"
           fi
-
           if [ -f pubspec.yaml ]; then
             echo "Flutter package detected"
           fi
-
           if [ -f package-lock.json ]; then
             echo "package-lock.json detected"
           fi
-
           echo "Dependency policy check completed."
 
   # ============================================================
@@ -460,7 +419,6 @@ jobs:
   # ============================================================
   uat-summary:
     name: 🚦 UAT Security Gate
-
     needs:
       - detect
       - secret-scan
@@ -471,11 +429,8 @@ jobs:
       - node
       - angular-build
       - dependency-policy
-
     if: always()
-
     runs-on: ubuntu-latest
-
     steps:
       - name: Evaluate security results
         shell: bash
@@ -483,7 +438,6 @@ jobs:
           echo "=========================================="
           echo "        UAT SECURITY SUMMARY"
           echo "=========================================="
-
           echo "Secret Scan        : ${{ needs.secret-scan.result }}"
           echo "Semgrep SAST       : ${{ needs.sast.result }}"
           echo "SonarQube          : ${{ needs.sonarqube.result }}"
@@ -491,44 +445,35 @@ jobs:
           echo "Flutter            : ${{ needs.flutter.result }}"
           echo "Node.js            : ${{ needs.node.result }}"
           echo "Angular Build      : ${{ needs.angular-build.result }}"
-          echo "Dependency Policy : ${{ needs.dependency-policy.result }}"
-
+          echo "Dependency Policy  : ${{ needs.dependency-policy.result }}"
           echo "=========================================="
-
+          
           FAILED=false
-
           if [[ "${{ needs.secret-scan.result }}" == "failure" ]]; then
             FAILED=true
           fi
-
           if [[ "${{ needs.sast.result }}" == "failure" ]]; then
             FAILED=true
           fi
-
           if [[ "${{ needs.sonarqube.result }}" == "failure" ]]; then
             FAILED=true
           fi
-
           if [[ "${{ needs.dependency-scan.result }}" == "failure" ]]; then
             FAILED=true
           fi
-
           if [[ "${{ needs.flutter.result }}" == "failure" ]]; then
             FAILED=true
           fi
-
           if [[ "${{ needs.node.result }}" == "failure" ]]; then
             FAILED=true
           fi
-
           if [[ "${{ needs.angular-build.result }}" == "failure" ]]; then
             FAILED=true
           fi
-
           if [[ "${{ needs.dependency-policy.result }}" == "failure" ]]; then
             FAILED=true
           fi
-
+          
           if [[ "$FAILED" == "true" ]]; then
             echo ""
             echo "❌ UAT SECURITY GATE FAILED"
@@ -536,7 +481,6 @@ jobs:
             echo "Please fix the reported issues before promoting code."
             exit 1
           fi
-
           echo ""
           echo "✅ UAT SECURITY GATE PASSED"
           echo ""
