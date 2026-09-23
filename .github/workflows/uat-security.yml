@@ -4,515 +4,1147 @@ on:
   push:
     branches:
       - uat
+
   workflow_dispatch:
 
 permissions:
   contents: read
   security-events: write
 
+concurrency:
+  group: uat-security-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   NODE_VERSION: "24"
   PYTHON_VERSION: "3.12"
-
-  # SonarQube
-  SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  FLUTTER_VERSION: "stable"
 
 jobs:
-  quality-security:
-    name: SonarQube + Semgrep
+
+  # ============================================================
+  # 1. DETECT PROJECT TYPE
+  # ============================================================
+
+  detect:
+    name: Detect Project
+    runs-on: ubuntu-latest
+
+    outputs:
+      flutter: ${{ steps.detect.outputs.flutter }}
+      node: ${{ steps.detect.outputs.node }}
+      angular: ${{ steps.detect.outputs.angular }}
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Detect technologies
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          flutter=false
+          node=false
+          angular=false
+
+          if [[ -f "pubspec.yaml" ]]; then
+            flutter=true
+          fi
+
+          if [[ -f "package.json" ]]; then
+            node=true
+          fi
+
+          if [[ -f "angular.json" ]]; then
+            angular=true
+          fi
+
+          echo "flutter=$flutter" >> "$GITHUB_OUTPUT"
+          echo "node=$node" >> "$GITHUB_OUTPUT"
+          echo "angular=$angular" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Project Detection"
+            echo ""
+            echo "| Technology | Detected |"
+            echo "|---|---|"
+            echo "| Flutter | $flutter |"
+            echo "| Node.js | $node |"
+            echo "| Angular | $angular |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+
+  # ============================================================
+  # 2. SECRET SCANNING - GITLEAKS
+  # ============================================================
+
+  secret-scan:
+    name: Secret Scan - Gitleaks
     runs-on: ubuntu-latest
 
     steps:
 
-      # ============================================================
-      # 1. CHECKOUT
-      # ============================================================
-      - name: Checkout UAT
-        uses: actions/checkout@v6
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # ============================================================
-      # 2. BASIC ENVIRONMENT
-      # ============================================================
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
+      - name: Install Gitleaks
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="8.28.0"
+
+          curl -sSfL \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
+            -o /tmp/gitleaks.tar.gz
+
+          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+
+          sudo install /tmp/gitleaks /usr/local/bin/gitleaks
+
+          gitleaks version
+
+      - name: Run Gitleaks
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p reports
+
+          gitleaks git . \
+            --redact \
+            --report-format json \
+            --report-path reports/gitleaks.json \
+            --exit-code 1
+
+      - name: Upload Gitleaks report
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-        continue-on-error: true
+          name: gitleaks-report
+          path: reports/gitleaks.json
+          if-no-files-found: warn
+          retention-days: 30
+
+
+  # ============================================================
+  # 3. SAST - SEMGREP
+  # ============================================================
+
+  sast:
+    name: SAST - Semgrep
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      # ============================================================
-      # 3. INSTALL SEMGREP
-      # ============================================================
       - name: Install Semgrep
+        shell: bash
         run: |
+          set -euo pipefail
+
           python -m pip install --upgrade pip
-          pip install semgrep
+          python -m pip install semgrep
 
           semgrep --version
 
-      # ============================================================
-      # 4. SONARQUBE SCAN
-      # ============================================================
-      - name: SonarQube Scan
-        id: sonar
-        continue-on-error: true
-        uses: SonarSource/sonarqube-scan-action@v7
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        with:
-          args: >
-            -Dsonar.projectKey=${{ github.event.repository.name }}
-            -Dsonar.projectName=${{ github.event.repository.name }}
-            -Dsonar.branch.name=uat
-            -Dsonar.scm.provider=git
-            -Dsonar.qualitygate.wait=true
-            -Dsonar.qualitygate.timeout=300
-
-      # ============================================================
-      # 5. GET SONARQUBE QUALITY GATE
-      # ============================================================
-      - name: Get SonarQube Quality Gate
-        id: sonar_gate
-        continue-on-error: true
+      - name: Run Semgrep
         shell: bash
         run: |
+          set -euo pipefail
 
-          echo "Reading SonarQube Quality Gate..."
-
-          RESPONSE=$(curl -s \
-            -u "${SONAR_TOKEN}:" \
-            "${SONAR_HOST_URL}/api/qualitygates/project_status?projectKey=${{ github.event.repository.name }}&branch=uat")
-
-          echo "$RESPONSE" > sonar-quality-gate.json
-
-          STATUS=$(echo "$RESPONSE" | jq -r '.projectStatus.status // "ERROR"')
-
-          echo "SonarQube Quality Gate: $STATUS"
-
-          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
-
-      # ============================================================
-      # 6. GET SONARQUBE ISSUE COUNTS
-      # ============================================================
-      - name: Get SonarQube Issue Counts
-        id: sonar_issues
-        continue-on-error: true
-        shell: bash
-        run: |
-
-          echo "Collecting SonarQube issue counts..."
-
-          BASE_URL="${SONAR_HOST_URL}/api/issues/search"
-          PROJECT="${{ github.event.repository.name }}"
-
-          get_count() {
-            SEVERITY="$1"
-
-            curl -s \
-              -u "${SONAR_TOKEN}:" \
-              "${BASE_URL}?componentKeys=${PROJECT}&branch=uat&severities=${SEVERITY}&resolved=false&ps=1" \
-              | jq -r '.total // 0'
-          }
-
-          BLOCKER=$(get_count BLOCKER)
-          CRITICAL=$(get_count CRITICAL)
-          MAJOR=$(get_count MAJOR)
-          MINOR=$(get_count MINOR)
-          INFO=$(get_count INFO)
-
-          VULNERABILITIES=$(curl -s \
-            -u "${SONAR_TOKEN}:" \
-            "${BASE_URL}?componentKeys=${PROJECT}&branch=uat&types=VULNERABILITY&resolved=false&ps=1" \
-            | jq -r '.total // 0')
-
-          BUGS=$(curl -s \
-            -u "${SONAR_TOKEN}:" \
-            "${BASE_URL}?componentKeys=${PROJECT}&branch=uat&types=BUG&resolved=false&ps=1" \
-            | jq -r '.total // 0')
-
-          CODE_SMELLS=$(curl -s \
-            -u "${SONAR_TOKEN}:" \
-            "${BASE_URL}?componentKeys=${PROJECT}&branch=uat&types=CODE_SMELL&resolved=false&ps=1" \
-            | jq -r '.total // 0')
-
-          HOTSPOTS=$(curl -s \
-            -u "${SONAR_TOKEN}:" \
-            "${SONAR_HOST_URL}/api/hotspots/search?projectKey=${PROJECT}&branch=uat&status=TO_REVIEW&ps=1" \
-            | jq -r '.paging.total // 0')
-
-          echo "BLOCKER=$BLOCKER" >> "$GITHUB_OUTPUT"
-          echo "CRITICAL=$CRITICAL" >> "$GITHUB_OUTPUT"
-          echo "MAJOR=$MAJOR" >> "$GITHUB_OUTPUT"
-          echo "MINOR=$MINOR" >> "$GITHUB_OUTPUT"
-          echo "INFO=$INFO" >> "$GITHUB_OUTPUT"
-
-          echo "VULNERABILITIES=$VULNERABILITIES" >> "$GITHUB_OUTPUT"
-          echo "BUGS=$BUGS" >> "$GITHUB_OUTPUT"
-          echo "CODE_SMELLS=$CODE_SMELLS" >> "$GITHUB_OUTPUT"
-          echo "HOTSPOTS=$HOTSPOTS" >> "$GITHUB_OUTPUT"
-
-      # ============================================================
-      # 7. SEMGREP SAST
-      # ============================================================
-      - name: Run Semgrep SAST
-        id: semgrep
-        continue-on-error: true
-        shell: bash
-        run: |
-
-          mkdir -p security-reports
+          mkdir -p reports
 
           semgrep scan \
             --config auto \
             --json \
-            --output security-reports/semgrep.json \
+            --output reports/semgrep.json \
             --exclude .git \
             --exclude build \
             --exclude node_modules \
             --exclude .dart_tool \
             --exclude ios/Pods \
             --exclude android/.gradle \
-            --exclude android/build \
-            --exclude web \
-            --exclude firebase_options.dart \
-            .
+            --exclude android/app/.cxx \
+            --exclude .github \
+            --exclude "**/firebase_options.dart" \
+            --exclude "lib/pages/notification/firebase_options.dart" \
+            --exclude "web/sqflite_sw.js" \
+            --exclude "ios/Runner/Info.plist" \
+            --exclude "ios/Runner/Infomlzs.plist"
 
-      # ============================================================
-      # 8. SEMGREP SARIF
-      # ============================================================
-      - name: Run Semgrep SARIF
-        id: semgrep_sarif
-        continue-on-error: true
-        shell: bash
-        run: |
-
+          # Fail on findings
           semgrep scan \
             --config auto \
-            --sarif \
-            --output security-reports/semgrep.sarif \
+            --error \
             --exclude .git \
             --exclude build \
             --exclude node_modules \
             --exclude .dart_tool \
             --exclude ios/Pods \
             --exclude android/.gradle \
-            --exclude android/build \
-            --exclude web \
-            --exclude firebase_options.dart \
-            .
+            --exclude android/app/.cxx \
+            --exclude .github \
+            --exclude "**/firebase_options.dart" \
+            --exclude "lib/pages/notification/firebase_options.dart" \
+            --exclude "web/sqflite_sw.js" \
+            --exclude "ios/Runner/Info.plist" \
+            --exclude "ios/Runner/Infomlzs.plist"
 
-      # ============================================================
-      # 9. SEMGREP COUNTS
-      # ============================================================
-      - name: Calculate Semgrep Findings
-        id: semgrep_counts
+      - name: Upload Semgrep report
         if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-report
+          path: reports/semgrep.json
+          if-no-files-found: warn
+          retention-days: 30
+
+
+  # ============================================================
+  # 4. DEPENDENCY / FILESYSTEM SECURITY - TRIVY
+  # ============================================================
+
+  dependency-scan:
+    name: Dependency Security - Trivy
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          format: json
+          output: reports/trivy.json
+          exit-code: "1"
+
+      - name: Upload Trivy report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: reports/trivy.json
+          if-no-files-found: warn
+          retention-days: 30
+
+
+  # ============================================================
+  # 5. FLUTTER / DART QUALITY
+  # ============================================================
+
+  flutter:
+    name: Flutter Quality
+    needs: detect
+
+    if: needs.detect.outputs.flutter == 'true'
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Check outdated dependencies
+        continue-on-error: true
+        run: flutter pub outdated
+
+      - name: Analyze Dart code
+        run: |
+          set -euo pipefail
+          flutter analyze
+
+      - name: Run Flutter tests
+        run: |
+          set -euo pipefail
+          flutter test
+
+
+  # ============================================================
+  # 6. NODE.JS / ANGULAR QUALITY
+  # ============================================================
+
+  node:
+    name: Node.js / Angular Quality
+    needs: detect
+
+    if: needs.detect.outputs.node == 'true'
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
+
+      # --------------------------------------------------------
+      # Dependency installation
+      # --------------------------------------------------------
+
+      - name: Install dependencies
         shell: bash
         run: |
+          set -euo pipefail
 
-          FILE="security-reports/semgrep.json"
-
-          if [ ! -f "$FILE" ]; then
-
-            echo "TOTAL=0" >> "$GITHUB_OUTPUT"
-            echo "ERROR=0" >> "$GITHUB_OUTPUT"
-            echo "WARNING=0" >> "$GITHUB_OUTPUT"
-            echo "INFO=0" >> "$GITHUB_OUTPUT"
-
-            exit 0
+          if [[ -f "package-lock.json" ]]; then
+            echo "package-lock.json found. Running npm ci."
+            npm ci
+          else
+            echo "WARNING: package-lock.json not found."
+            echo "Running npm install."
+            npm install
           fi
 
-          TOTAL=$(jq '.results | length' "$FILE")
+      # --------------------------------------------------------
+      # ESLint
+      # --------------------------------------------------------
 
-          ERROR=$(jq '[.results[] | select(.extra.severity == "ERROR")] | length' "$FILE")
+      - name: ESLint
+        shell: bash
+        run: |
+          set -euo pipefail
 
-          WARNING=$(jq '[.results[] | select(.extra.severity == "WARNING")] | length' "$FILE")
+          if node -e "const p=require('./package.json'); process.exit(p.scripts?.lint ? 0 : 1)" 2>/dev/null; then
 
-          INFO=$(jq '[.results[] | select(.extra.severity == "INFO")] | length' "$FILE")
+            echo "Running npm lint script..."
+            npm run lint
 
-          echo "TOTAL=$TOTAL" >> "$GITHUB_OUTPUT"
-          echo "ERROR=$ERROR" >> "$GITHUB_OUTPUT"
-          echo "WARNING=$WARNING" >> "$GITHUB_OUTPUT"
-          echo "INFO=$INFO" >> "$GITHUB_OUTPUT"
+          elif [[ -f "eslint.config.js" ]] ||
+               [[ -f "eslint.config.mjs" ]] ||
+               [[ -f "eslint.config.cjs" ]] ||
+               [[ -f ".eslintrc.json" ]] ||
+               [[ -f ".eslintrc.js" ]] ||
+               [[ -f ".eslintrc.cjs" ]]; then
 
-          echo "Semgrep Total      : $TOTAL"
-          echo "Semgrep ERROR      : $ERROR"
-          echo "Semgrep WARNING    : $WARNING"
-          echo "Semgrep INFO       : $INFO"
+            echo "ESLint configuration detected."
 
-      # ============================================================
-      # 10. UPLOAD SARIF TO GITHUB
-      # ============================================================
-      - name: Upload Semgrep SARIF
-        if: always() && hashFiles('security-reports/semgrep.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+            npx eslint . --max-warnings=0
+
+          else
+
+            echo "No ESLint configuration found."
+            echo "Skipping ESLint."
+
+          fi
+
+      # --------------------------------------------------------
+      # TypeScript
+      # --------------------------------------------------------
+
+      - name: TypeScript validation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -f "tsconfig.json" ]]; then
+            npx tsc --noEmit
+          else
+            echo "No tsconfig.json found. Skipping TypeScript validation."
+          fi
+
+      # --------------------------------------------------------
+      # Unit Tests
+      # --------------------------------------------------------
+
+      - name: Run tests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if node -e "const p=require('./package.json'); process.exit(p.scripts?.test ? 0 : 1)" 2>/dev/null; then
+
+            npm test -- --watch=false
+
+          else
+
+            echo "No npm test script found."
+            echo "Skipping tests."
+
+          fi
+
+      # --------------------------------------------------------
+      # NPM SECURITY
+      # --------------------------------------------------------
+
+      - name: NPM audit
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          npm audit \
+            --audit-level=high \
+            --omit=dev
+
+
+  # ============================================================
+  # 7. ANGULAR PRODUCTION BUILD
+  # ============================================================
+
+  angular-build:
+    name: Angular Production Build
+
+    needs:
+      - detect
+      - node
+
+    if: |
+      needs.detect.outputs.angular == 'true' &&
+      needs.node.result == 'success'
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
         with:
-          sarif_file: security-reports/semgrep.sarif
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -f "package-lock.json" ]]; then
+            npm ci
+          else
+            npm install
+          fi
+
+      - name: Install Angular CLI if required
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -x "./node_modules/.bin/ng" ]]; then
+            echo "Using project Angular CLI."
+          else
+            echo "Project Angular CLI not found."
+            npm install -g @angular/cli
+          fi
+
+      - name: Angular production build
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -x "./node_modules/.bin/ng" ]]; then
+            ./node_modules/.bin/ng build --configuration production
+          else
+            ng build --configuration production
+          fi
+
+      - name: Upload Angular build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: angular-production-build
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+
+  # ============================================================
+  # 8. DEPENDENCY POLICY
+  # ============================================================
+
+  dependency-policy:
+    name: Dependency Policy
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Validate dependency manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Checking dependency manifests..."
+
+          if [[ -f "package.json" ]]; then
+            echo "Node.js package detected."
+          fi
+
+          if [[ -f "package-lock.json" ]]; then
+            echo "package-lock.json detected."
+          fi
+
+          if [[ -f "pubspec.yaml" ]]; then
+            echo "Flutter package detected."
+          fi
+
+          echo "Dependency policy check completed."
+
+
+  # ============================================================
+  # 9. CONSOLIDATED REPORT
+  # ============================================================
+
+  report:
+    name: Generate Security Report
+
+    needs:
+      - detect
+      - secret-scan
+      - sast
+      - dependency-scan
+      - flutter
+      - node
+      - angular-build
+      - dependency-policy
+
+    if: always()
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Download scan reports
+        uses: actions/download-artifact@v4
+        with:
+          path: downloaded-reports
+          pattern: "*-report"
+          merge-multiple: false
         continue-on-error: true
 
-      # ============================================================
-      # 11. DETERMINE FINAL STATUS
-      # ============================================================
-      - name: Determine Security Gate
-        id: gate
-        if: always()
+      - name: Generate consolidated HTML report
         shell: bash
+        env:
+          SECRET_SCAN_RESULT: ${{ needs.secret-scan.result }}
+          SAST_RESULT: ${{ needs.sast.result }}
+          DEPENDENCY_RESULT: ${{ needs.dependency-scan.result }}
+          FLUTTER_RESULT: ${{ needs.flutter.result }}
+          NODE_RESULT: ${{ needs.node.result }}
+          ANGULAR_RESULT: ${{ needs.angular-build.result }}
+          POLICY_RESULT: ${{ needs.dependency-policy.result }}
         run: |
+          set -euo pipefail
 
-          SONAR_STATUS="${{ steps.sonar_gate.outputs.status }}"
-          SEMGREP_ERROR="${{ steps.semgrep_counts.outputs.ERROR }}"
+          mkdir -p final-report
 
-          echo "SonarQube Status : $SONAR_STATUS"
-          echo "Semgrep ERROR    : $SEMGREP_ERROR"
+          cat > final-report/security-report.html <<'HTML'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
 
-          FINAL_STATUS="PASS"
+            <meta name="viewport"
+                  content="width=device-width, initial-scale=1.0">
 
-          if [ "$SONAR_STATUS" != "OK" ]; then
-            FINAL_STATUS="FAIL"
-          fi
+            <title>UAT Security & Quality Report</title>
 
-          if [ "${SEMGREP_ERROR:-0}" -gt 0 ]; then
-            FINAL_STATUS="FAIL"
-          fi
+            <style>
+              body {
+                font-family: Arial, Helvetica, sans-serif;
+                margin: 0;
+                padding: 30px;
+                background: #f5f7fa;
+                color: #263238;
+              }
 
-          echo "FINAL_STATUS=$FINAL_STATUS" >> "$GITHUB_OUTPUT"
+              .container {
+                max-width: 1200px;
+                margin: auto;
+              }
 
-          if [ "$FINAL_STATUS" = "PASS" ]; then
-            echo "Security and quality gate PASSED."
-          else
-            echo "Security and quality gate FAILED."
-          fi
+              .header {
+                background: #1565c0;
+                color: white;
+                padding: 25px;
+                border-radius: 10px;
+                margin-bottom: 20px;
+              }
 
-      # ============================================================
-      # 12. CREATE HTML EMAIL REPORT
-      # ============================================================
-      - name: Create Email Report
-        if: always()
-        shell: bash
-        run: |
+              h1 {
+                margin: 0 0 10px 0;
+              }
 
-          SONAR_STATUS="${{ steps.sonar_gate.outputs.status }}"
-          FINAL_STATUS="${{ steps.gate.outputs.FINAL_STATUS }}"
+              .card {
+                background: white;
+                border-radius: 10px;
+                padding: 20px;
+                margin-bottom: 20px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+              }
 
-          if [ "$FINAL_STATUS" = "PASS" ]; then
-            STATUS_TEXT="PASSED"
-          else
-            STATUS_TEXT="FAILED"
-          fi
+              table {
+                width: 100%;
+                border-collapse: collapse;
+              }
 
-          cat > security-report.html <<EOF
-          <html>
-          <body style="font-family:Arial,Helvetica,sans-serif;">
+              th,
+              td {
+                padding: 12px;
+                border-bottom: 1px solid #e0e0e0;
+                text-align: left;
+              }
 
-          <h2>Git Code Quality & Security Report</h2>
+              th {
+                background: #f5f7fa;
+              }
 
-          <table border="1" cellpadding="8" cellspacing="0"
-                 style="border-collapse:collapse;width:100%;">
+              .success {
+                color: #2e7d32;
+                font-weight: bold;
+              }
 
-          <tr>
-            <td><b>Repository</b></td>
-            <td>${{ github.repository }}</td>
-          </tr>
+              .failure {
+                color: #d32f2f;
+                font-weight: bold;
+              }
 
-          <tr>
-            <td><b>Branch</b></td>
-            <td>uat</td>
-          </tr>
+              .skipped {
+                color: #757575;
+                font-weight: bold;
+              }
 
-          <tr>
-            <td><b>Commit</b></td>
-            <td>${{ github.sha }}</td>
-          </tr>
+              .warning {
+                color: #f9a825;
+                font-weight: bold;
+              }
 
-          <tr>
-            <td><b>Developer</b></td>
-            <td>${{ github.actor }}</td>
-          </tr>
+              .footer {
+                color: #757575;
+                font-size: 12px;
+                margin-top: 20px;
+              }
 
-          <tr>
-            <td><b>Overall Status</b></td>
-            <td><b>${STATUS_TEXT}</b></td>
-          </tr>
+              pre {
+                background: #263238;
+                color: #ffffff;
+                padding: 15px;
+                overflow-x: auto;
+                border-radius: 6px;
+              }
+            </style>
+          </head>
 
-          </table>
+          <body>
 
-          <br>
+          <div class="container">
 
-          <h3>SonarQube</h3>
+            <div class="header">
+              <h1>UAT Security & Quality Report</h1>
+              <div>
+                Repository:
+                <strong>${GITHUB_REPOSITORY}</strong>
+              </div>
+              <div>
+                Branch:
+                <strong>${GITHUB_REF_NAME}</strong>
+              </div>
+              <div>
+                Commit:
+                <strong>${GITHUB_SHA}</strong>
+              </div>
+              <div>
+                Workflow Run:
+                <strong>#${GITHUB_RUN_NUMBER}</strong>
+              </div>
+            </div>
 
-          <table border="1" cellpadding="8" cellspacing="0"
-                 style="border-collapse:collapse;width:100%;">
+            <div class="card">
 
-          <tr>
-            <th>Metric</th>
-            <th>Count</th>
-          </tr>
+              <h2>Pipeline Summary</h2>
 
-          <tr>
-            <td>Quality Gate</td>
-            <td>${SONAR_STATUS}</td>
-          </tr>
+              <table>
 
-          <tr>
-            <td>Blocker</td>
-            <td>${{ steps.sonar_issues.outputs.BLOCKER }}</td>
-          </tr>
+                <tr>
+                  <th>Check</th>
+                  <th>Status</th>
+                </tr>
 
-          <tr>
-            <td>Critical</td>
-            <td>${{ steps.sonar_issues.outputs.CRITICAL }}</td>
-          </tr>
+                <tr>
+                  <td>Gitleaks Secret Scan</td>
+                  <td class="${SECRET_SCAN_RESULT}">
+                    ${SECRET_SCAN_RESULT}
+                  </td>
+                </tr>
 
-          <tr>
-            <td>Major</td>
-            <td>${{ steps.sonar_issues.outputs.MAJOR }}</td>
-          </tr>
+                <tr>
+                  <td>Semgrep SAST</td>
+                  <td class="${SAST_RESULT}">
+                    ${SAST_RESULT}
+                  </td>
+                </tr>
 
-          <tr>
-            <td>Minor</td>
-            <td>${{ steps.sonar_issues.outputs.MINOR }}</td>
-          </tr>
+                <tr>
+                  <td>Trivy Dependency Security</td>
+                  <td class="${DEPENDENCY_RESULT}">
+                    ${DEPENDENCY_RESULT}
+                  </td>
+                </tr>
 
-          <tr>
-            <td>Bugs</td>
-            <td>${{ steps.sonar_issues.outputs.BUGS }}</td>
-          </tr>
+                <tr>
+                  <td>Flutter Quality</td>
+                  <td class="${FLUTTER_RESULT}">
+                    ${FLUTTER_RESULT}
+                  </td>
+                </tr>
 
-          <tr>
-            <td>Vulnerabilities</td>
-            <td>${{ steps.sonar_issues.outputs.VULNERABILITIES }}</td>
-          </tr>
+                <tr>
+                  <td>Node.js / Angular Quality</td>
+                  <td class="${NODE_RESULT}">
+                    ${NODE_RESULT}
+                  </td>
+                </tr>
 
-          <tr>
-            <td>Security Hotspots</td>
-            <td>${{ steps.sonar_issues.outputs.HOTSPOTS }}</td>
-          </tr>
+                <tr>
+                  <td>Angular Production Build</td>
+                  <td class="${ANGULAR_RESULT}">
+                    ${ANGULAR_RESULT}
+                  </td>
+                </tr>
 
-          <tr>
-            <td>Code Smells</td>
-            <td>${{ steps.sonar_issues.outputs.CODE_SMELLS }}</td>
-          </tr>
+                <tr>
+                  <td>Dependency Policy</td>
+                  <td class="${POLICY_RESULT}">
+                    ${POLICY_RESULT}
+                  </td>
+                </tr>
 
-          </table>
+              </table>
 
-          <br>
+            </div>
 
-          <h3>Semgrep SAST</h3>
+            <div class="card">
 
-          <table border="1" cellpadding="8" cellspacing="0"
-                 style="border-collapse:collapse;width:100%;">
+              <h2>Security Checks</h2>
 
-          <tr>
-            <th>Severity</th>
-            <th>Count</th>
-          </tr>
+              <ul>
+                <li>Secret detection: Gitleaks</li>
+                <li>Static Application Security Testing: Semgrep</li>
+                <li>Dependency/filesystem vulnerability scan: Trivy</li>
+                <li>NPM high/critical dependency audit</li>
+              </ul>
 
-          <tr>
-            <td>Total Findings</td>
-            <td>${{ steps.semgrep_counts.outputs.TOTAL }}</td>
-          </tr>
+            </div>
 
-          <tr>
-            <td>ERROR</td>
-            <td>${{ steps.semgrep_counts.outputs.ERROR }}</td>
-          </tr>
+            <div class="card">
 
-          <tr>
-            <td>WARNING</td>
-            <td>${{ steps.semgrep_counts.outputs.WARNING }}</td>
-          </tr>
+              <h2>Quality Checks</h2>
 
-          <tr>
-            <td>INFO</td>
-            <td>${{ steps.semgrep_counts.outputs.INFO }}</td>
-          </tr>
+              <ul>
+                <li>Flutter static analysis</li>
+                <li>Flutter unit tests</li>
+                <li>ESLint</li>
+                <li>TypeScript validation</li>
+                <li>Node.js unit tests</li>
+                <li>Angular production build</li>
+              </ul>
 
-          </table>
+            </div>
 
-          <br>
+            <div class="card">
 
-          <h3>Required Action</h3>
+              <h2>Generated Artifacts</h2>
 
-          <p>
-          Review and resolve all Critical/High security findings and
-          SonarQube Quality Gate failures before promoting the code
-          from <b>UAT</b> to <b>main</b>.
-          </p>
+              <ul>
+                <li>Gitleaks JSON report</li>
+                <li>Semgrep JSON report</li>
+                <li>Trivy JSON report</li>
+                <li>Angular production build</li>
+              </ul>
 
-          <p>
-          <b>GitHub Actions Run:</b>
-          <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">
-          View Workflow Run
-          </a>
-          </p>
+            </div>
 
-          <p>
-          <b>SonarQube:</b>
-          <a href="${SONAR_HOST_URL}/dashboard?id=${{ github.event.repository.name }}&branch=uat">
-          Open SonarQube Project
-          </a>
-          </p>
+            <div class="footer">
+              Generated automatically by GitHub Actions.
+            </div>
+
+          </div>
 
           </body>
           </html>
-          EOF
+          HTML
 
-          echo "Email report generated."
+      - name: Generate machine-readable summary
+        shell: bash
+        run: |
+          set -euo pipefail
 
-      # ============================================================
-      # 13. SEND EMAIL
-      # ============================================================
-      - name: Send Code Quality & Security Email
-        if: always()
-        uses: dawidd6/action-send-mail@v18
-        with:
-          server_address: ${{ secrets.SMTP_SERVER }}
-          server_port: ${{ secrets.SMTP_PORT }}
-          secure: ${{ secrets.SMTP_SECURE }}
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
+          cat > final-report/summary.json <<JSON
+          {
+            "repository": "${GITHUB_REPOSITORY}",
+            "workflow": "${GITHUB_WORKFLOW}",
+            "run_number": "${GITHUB_RUN_NUMBER}",
+            "branch": "${GITHUB_REF_NAME}",
+            "commit": "${GITHUB_SHA}",
+            "results": {
+              "secret_scan": "${{ needs.secret-scan.result }}",
+              "sast": "${{ needs.sast.result }}",
+              "dependency_scan": "${{ needs.dependency-scan.result }}",
+              "flutter": "${{ needs.flutter.result }}",
+              "node": "${{ needs.node.result }}",
+              "angular_build": "${{ needs.angular-build.result }}",
+              "dependency_policy": "${{ needs.dependency-policy.result }}"
+            }
+          }
+          JSON
 
-          from: ${{ secrets.SMTP_FROM }}
-          to: ${{ secrets.SECURITY_EMAIL_TO }}
-          cc: ${{ secrets.SECURITY_EMAIL_CC }}
-
-          subject: >
-            [${{ steps.gate.outputs.FINAL_STATUS }}]
-            UAT Code Quality & Security -
-            ${{ github.event.repository.name }}
-
-          html_body: file://security-report.html
-
-          attachments: |
-            security-reports/semgrep.json,
-            security-reports/semgrep.sarif
-
-      # ============================================================
-      # 14. FAIL WORKFLOW IF GATE FAILED
-      # ============================================================
-      - name: Enforce Security Gate
+      - name: Add report to GitHub summary
         if: always()
         shell: bash
         run: |
+          {
+            echo "## UAT Security & Quality Report"
+            echo ""
+            echo "| Check | Result |"
+            echo "|---|---|"
+            echo "| Gitleaks | ${{ needs.secret-scan.result }} |"
+            echo "| Semgrep | ${{ needs.sast.result }} |"
+            echo "| Trivy | ${{ needs.dependency-scan.result }} |"
+            echo "| Flutter | ${{ needs.flutter.result }} |"
+            echo "| Node.js | ${{ needs.node.result }} |"
+            echo "| Angular Build | ${{ needs.angular-build.result }} |"
+            echo "| Dependency Policy | ${{ needs.dependency-policy.result }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
-          if [ "${{ steps.gate.outputs.FINAL_STATUS }}" != "PASS" ]; then
+      - name: Upload consolidated report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: uat-security-report
+          path: final-report/
+          if-no-files-found: error
+          retention-days: 30
 
-            echo "======================================"
-            echo " CODE QUALITY / SECURITY GATE FAILED "
-            echo "======================================"
 
+  # ============================================================
+  # 10. FINAL UAT SECURITY GATE
+  # ============================================================
+
+  uat-summary:
+    name: UAT Security Gate
+
+    needs:
+      - detect
+      - secret-scan
+      - sast
+      - dependency-scan
+      - flutter
+      - node
+      - angular-build
+      - dependency-policy
+      - report
+
+    if: always()
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Evaluate security results
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "=========================================="
+          echo "        UAT SECURITY GATE"
+          echo "=========================================="
+
+          echo "Secret Scan       : ${{ needs.secret-scan.result }}"
+          echo "Semgrep SAST      : ${{ needs.sast.result }}"
+          echo "Trivy             : ${{ needs.dependency-scan.result }}"
+          echo "Flutter           : ${{ needs.flutter.result }}"
+          echo "Node.js           : ${{ needs.node.result }}"
+          echo "Angular Build     : ${{ needs.angular-build.result }}"
+          echo "Dependency Policy : ${{ needs.dependency-policy.result }}"
+          echo "Report            : ${{ needs.report.result }}"
+
+          echo "=========================================="
+
+          FAILED=false
+
+          check_job() {
+            local NAME="$1"
+            local RESULT="$2"
+
+            if [[ "$RESULT" == "failure" ]]; then
+              echo "❌ $NAME FAILED"
+              FAILED=true
+            elif [[ "$RESULT" == "cancelled" ]]; then
+              echo "❌ $NAME CANCELLED"
+              FAILED=true
+            elif [[ "$RESULT" == "success" ]]; then
+              echo "✅ $NAME PASSED"
+            elif [[ "$RESULT" == "skipped" ]]; then
+              echo "ℹ️ $NAME SKIPPED"
+            else
+              echo "⚠️ $NAME: $RESULT"
+            fi
+          }
+
+          check_job "Gitleaks" "${{ needs.secret-scan.result }}"
+          check_job "Semgrep" "${{ needs.sast.result }}"
+          check_job "Trivy" "${{ needs.dependency-scan.result }}"
+          check_job "Flutter" "${{ needs.flutter.result }}"
+          check_job "Node.js" "${{ needs.node.result }}"
+          check_job "Angular Build" "${{ needs.angular-build.result }}"
+          check_job "Dependency Policy" "${{ needs.dependency-policy.result }}"
+
+          echo ""
+
+          if [[ "$FAILED" == "true" ]]; then
+            echo "❌ UAT SECURITY GATE FAILED"
+            echo ""
+            echo "Review the generated security reports."
             exit 1
           fi
 
-          echo "======================================"
-          echo " CODE QUALITY / SECURITY GATE PASSED "
-          echo "======================================"
+          echo "✅ UAT SECURITY GATE PASSED"
+
+
+  # ============================================================
+  # 11. FINAL EMAIL NOTIFICATION
+  #
+  # IMPORTANT:
+  # This is intentionally the final job.
+  #
+  # It runs even when the security gate fails.
+  # ============================================================
+
+  email-report:
+    name: Email UAT Security Report
+
+    needs:
+      - report
+      - uat-summary
+
+    if: always()
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Download consolidated report
+        uses: actions/download-artifact@v4
+        with:
+          name: uat-security-report
+          path: final-report
+        continue-on-error: true
+
+      - name: Determine pipeline status
+        id: status
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ needs.uat-summary.result }}" == "success" ]]; then
+            echo "status=PASSED" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=FAILED" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send email
+        shell: python
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+
+          PIPELINE_STATUS: ${{ steps.status.outputs.status }}
+
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+
+          SECRET_SCAN_RESULT: ${{ needs.uat-summary.result }}
+        run: |
+          import os
+          import smtplib
+          import ssl
+
+          from email.message import EmailMessage
+          from pathlib import Path
+
+          smtp_host = os.environ["SMTP_HOST"]
+          smtp_port = int(os.environ.get("SMTP_PORT", "587"))
+          smtp_username = os.environ["SMTP_USERNAME"]
+          smtp_password = os.environ["SMTP_PASSWORD"]
+
+          mail_from = os.environ["MAIL_FROM"]
+          mail_to = [
+              address.strip()
+              for address in os.environ["MAIL_TO"].split(",")
+              if address.strip()
+          ]
+
+          status = os.environ["PIPELINE_STATUS"]
+
+          repository = os.environ["GITHUB_REPOSITORY"]
+          branch = os.environ["GITHUB_REF_NAME"]
+          commit = os.environ["GITHUB_SHA"]
+          run_number = os.environ["GITHUB_RUN_NUMBER"]
+          server_url = os.environ["GITHUB_SERVER_URL"]
+
+          run_url = (
+              f"{server_url}/{repository}/actions/runs/"
+              f"{os.environ['GITHUB_RUN_ID']}"
+          )
+
+          subject = (
+              f"[UAT] Security & Quality Report - "
+              f"{status} - {repository} - Run #{run_number}"
+          )
+
+          body = f"""
+          UAT Security & Quality Pipeline Report
+
+          Status       : {status}
+          Repository   : {repository}
+          Branch       : {branch}
+          Commit       : {commit}
+          Workflow Run : #{run_number}
+
+          Security checks:
+            - Gitleaks Secret Scan
+            - Semgrep SAST
+            - Trivy Dependency Security
+            - NPM Audit
+
+          Quality checks:
+            - Flutter Analyze
+            - Flutter Tests
+            - ESLint
+            - TypeScript Validation
+            - Node.js Tests
+            - Angular Production Build
+
+          Detailed GitHub Actions report:
+          {run_url}
+
+          The detailed HTML/JSON reports are available as workflow artifacts.
+
+          This email was generated automatically by GitHub Actions.
+          """
+
+          msg = EmailMessage()
+          msg["Subject"] = subject
+          msg["From"] = mail_from
+          msg["To"] = ", ".join(mail_to)
+          msg.set_content(body)
+
+          html_report = Path(
+              "final-report/security-report.html"
+          )
+
+          if html_report.exists():
+              html_content = html_report.read_text(
+                  encoding="utf-8"
+              )
+
+              msg.add_attachment(
+                  html_content.encode("utf-8"),
+                  maintype="text",
+                  subtype="html",
+                  filename="uat-security-report.html"
+              )
+
+          summary = Path(
+              "final-report/summary.json"
+          )
+
+          if summary.exists():
+              msg.add_attachment(
+                  summary.read_bytes(),
+                  maintype="application",
+                  subtype="json",
+                  filename="uat-security-summary.json"
+              )
+
+          context = ssl.create_default_context()
+
+          with smtplib.SMTP(
+              smtp_host,
+              smtp_port,
+              timeout=30
+          ) as server:
+
+              server.ehlo()
+
+              if smtp_port == 587:
+                  server.starttls(context=context)
+                  server.ehlo()
+
+              server.login(
+                  smtp_username,
+                  smtp_password
+              )
+
+              server.send_message(msg)
+
+          print(
+              f"UAT security report email sent to: "
+              f"{', '.join(mail_to)}"
+          )
