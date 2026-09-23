@@ -225,15 +225,15 @@ jobs:
           channel: ${{ env.FLUTTER_VERSION }}
           cache: false
 
-      - name: Cache Flutter dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.pub-cache
-            .dart_tool
-          key: ${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-flutter-
+      # - name: Cache Flutter dependencies
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: |
+      #       ~/.pub-cache
+      #       .dart_tool
+      #     key: ${{ runner.os }}-flutter-${{ hashFiles('**/pubspec.lock') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-flutter-
 
       - name: Flutter version
         run: flutter --version
