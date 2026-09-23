@@ -100,10 +100,7 @@ jobs:
       SONAR_PROJECT_NAME: KidzeeWebAngularAutomation
   
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      
   
       - name: Validate SonarCloud configuration
         shell: bash
@@ -120,6 +117,10 @@ jobs:
           echo "SONAR_TOKEN is present"
           echo "Organization: $SONAR_ORGANIZATION"
           echo "Project key: $SONAR_PROJECT_KEY"
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
   
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v5
