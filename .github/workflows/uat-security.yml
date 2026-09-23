@@ -89,11 +89,25 @@ jobs:
   # ============================================================
   # 3. SONARQUBE CODE QUALITY & SECURITY
   # ============================================================
+  
   sonarqube:
     name: 📊 SonarQube Quality Gate
     runs-on: ubuntu-latest
 
     steps:
+      - name: Validate SonarCloud configuration
+        shell: bash
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::error::SONAR_TOKEN is missing or unavailable for this workflow"
+            exit 1
+          fi
+      
+          echo "SONAR_TOKEN is present"
+          echo "Organization: zeelearn"
+          echo "Project key: zeelearn_KidzeeWebAngularAutomation"
       - name: Checkout
         uses: actions/checkout@v4
         with:
