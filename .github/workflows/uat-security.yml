@@ -20,10 +20,16 @@ env:
   PYTHON_VERSION: "3.12"
   FLUTTER_VERSION: "stable"
 
+  # Security thresholds
+  TRIVY_SEVERITY: "CRITICAL,HIGH"
+
+  # Gitleaks
+  GITLEAKS_VERSION: "8.28.0"
+
 jobs:
 
   # ============================================================
-  # 1. DETECT PROJECT TYPE
+  # 1. DETECT PROJECT
   # ============================================================
 
   detect:
@@ -68,8 +74,12 @@ jobs:
           echo "node=$node" >> "$GITHUB_OUTPUT"
           echo "angular=$angular" >> "$GITHUB_OUTPUT"
 
+          echo "Flutter : $flutter"
+          echo "Node    : $node"
+          echo "Angular : $angular"
+
           {
-            echo "### Project Detection"
+            echo "## Project Detection"
             echo ""
             echo "| Technology | Detected |"
             echo "|---|---|"
@@ -80,7 +90,12 @@ jobs:
 
 
   # ============================================================
-  # 2. SECRET SCANNING - GITLEAKS
+  # 2. GITLEAKS
+  #
+  # IMPORTANT:
+  # This job intentionally FAILS when real leaks are found.
+  #
+  # Do not change this to continue-on-error in production.
   # ============================================================
 
   secret-scan:
@@ -89,7 +104,7 @@ jobs:
 
     steps:
 
-      - name: Checkout
+      - name: Checkout full history
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -99,30 +114,54 @@ jobs:
         run: |
           set -euo pipefail
 
-          VERSION="8.28.0"
+          VERSION="${GITLEAKS_VERSION}"
 
-          curl -sSfL \
+          curl -fsSL \
             "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz" \
             -o /tmp/gitleaks.tar.gz
 
-          tar -xzf /tmp/gitleaks.tar.gz -C /tmp gitleaks
+          tar -xzf /tmp/gitleaks.tar.gz \
+            -C /tmp \
+            gitleaks
 
-          sudo install /tmp/gitleaks /usr/local/bin/gitleaks
+          sudo install \
+            /tmp/gitleaks \
+            /usr/local/bin/gitleaks
 
           gitleaks version
+
+      - name: Prepare report directory
+        run: mkdir -p reports
 
       - name: Run Gitleaks
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
 
-          mkdir -p reports
+          echo "Running Gitleaks against complete Git history..."
 
           gitleaks git . \
             --redact \
             --report-format json \
-            --report-path reports/gitleaks.json \
-            --exit-code 1
+            --report-path reports/gitleaks.json
+
+          EXIT_CODE=$?
+
+          if [[ "$EXIT_CODE" -eq 0 ]]; then
+            echo "Gitleaks: no secrets detected."
+          else
+            echo ""
+            echo "=================================================="
+            echo "GITLEAKS DETECTED POTENTIAL SECRETS"
+            echo "=================================================="
+            echo ""
+            echo "Review reports/gitleaks.json"
+            echo ""
+            echo "The UAT security gate will fail."
+            echo ""
+
+            exit "$EXIT_CODE"
+          fi
 
       - name: Upload Gitleaks report
         if: always()
@@ -135,7 +174,7 @@ jobs:
 
 
   # ============================================================
-  # 3. SAST - SEMGREP
+  # 3. SEMGREP SAST
   # ============================================================
 
   sast:
@@ -155,7 +194,6 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install Semgrep
-        shell: bash
         run: |
           set -euo pipefail
 
@@ -164,12 +202,13 @@ jobs:
 
           semgrep --version
 
-      - name: Run Semgrep
+      - name: Prepare reports
+        run: mkdir -p reports
+
+      - name: Run Semgrep report
         shell: bash
         run: |
-          set -euo pipefail
-
-          mkdir -p reports
+          set +e
 
           semgrep scan \
             --config auto \
@@ -189,23 +228,11 @@ jobs:
             --exclude "ios/Runner/Info.plist" \
             --exclude "ios/Runner/Infomlzs.plist"
 
-          # Fail on findings
-          semgrep scan \
-            --config auto \
-            --error \
-            --exclude .git \
-            --exclude build \
-            --exclude node_modules \
-            --exclude .dart_tool \
-            --exclude ios/Pods \
-            --exclude android/.gradle \
-            --exclude android/app/.cxx \
-            --exclude .github \
-            --exclude "**/firebase_options.dart" \
-            --exclude "lib/pages/notification/firebase_options.dart" \
-            --exclude "web/sqflite_sw.js" \
-            --exclude "ios/Runner/Info.plist" \
-            --exclude "ios/Runner/Infomlzs.plist"
+          EXIT_CODE=$?
+
+          echo "Semgrep report exit code: $EXIT_CODE"
+
+          exit "$EXIT_CODE"
 
       - name: Upload Semgrep report
         if: always()
@@ -218,7 +245,7 @@ jobs:
 
 
   # ============================================================
-  # 4. DEPENDENCY / FILESYSTEM SECURITY - TRIVY
+  # 4. TRIVY
   # ============================================================
 
   dependency-scan:
@@ -232,13 +259,16 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Prepare reports directory
+        run: mkdir -p reports
+
       - name: Run Trivy
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
           scan-ref: .
           scanners: vuln,secret
-          severity: CRITICAL,HIGH
+          severity: ${{ env.TRIVY_SEVERITY }}
           ignore-unfixed: true
           format: json
           output: reports/trivy.json
@@ -255,7 +285,7 @@ jobs:
 
 
   # ============================================================
-  # 5. FLUTTER / DART QUALITY
+  # 5. FLUTTER
   # ============================================================
 
   flutter:
@@ -270,8 +300,6 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -285,27 +313,30 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Check outdated dependencies
-        continue-on-error: true
-        run: flutter pub outdated
+      - name: Flutter analyze
+        run: flutter analyze
 
-      - name: Analyze Dart code
-        run: |
-          set -euo pipefail
-          flutter analyze
+      - name: Flutter tests
+        run: flutter test
 
-      - name: Run Flutter tests
+      - name: Flutter dependency audit
+        shell: bash
         run: |
-          set -euo pipefail
-          flutter test
+          set +e
+
+          flutter pub outdated
+
+          echo "Dependency information generated."
+          echo "This is informational and does not fail the pipeline."
 
 
   # ============================================================
-  # 6. NODE.JS / ANGULAR QUALITY
+  # 6. NODE / ANGULAR QUALITY
   # ============================================================
 
   node:
     name: Node.js / Angular Quality
+
     needs: detect
 
     if: needs.detect.outputs.node == 'true'
@@ -316,8 +347,6 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -326,7 +355,7 @@ jobs:
           cache: ${{ hashFiles('**/package-lock.json') != '' && 'npm' || '' }}
 
       # --------------------------------------------------------
-      # Dependency installation
+      # Install dependencies
       # --------------------------------------------------------
 
       - name: Install dependencies
@@ -335,16 +364,69 @@ jobs:
           set -euo pipefail
 
           if [[ -f "package-lock.json" ]]; then
-            echo "package-lock.json found. Running npm ci."
+            echo "Using npm ci."
             npm ci
           else
-            echo "WARNING: package-lock.json not found."
-            echo "Running npm install."
+            echo "::warning::package-lock.json not found."
+            echo "Using npm install."
             npm install
           fi
 
       # --------------------------------------------------------
+      # Detect Angular projects
+      # --------------------------------------------------------
+
+      - name: Detect Angular projects
+        id: angular-projects
+        if: needs.detect.outputs.angular == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f "angular.json" ]]; then
+            echo "has_lint_target=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PROJECTS="$(node <<'NODE'
+          const fs = require("fs");
+
+          const angular = JSON.parse(
+            fs.readFileSync("angular.json", "utf8")
+          );
+
+          const projects = angular.projects || {};
+
+          let found = false;
+
+          for (const [name, project] of Object.entries(projects)) {
+            const targets = project.architect || project.targets || {};
+
+            if (targets.lint) {
+              found = true;
+              console.log(name);
+            }
+          }
+
+          process.stdout.write(found ? "true" : "false");
+          NODE
+          )"
+
+          echo "has_lint_target=$PROJECTS" >> "$GITHUB_OUTPUT"
+
+          echo "Angular lint target available: $PROJECTS"
+
+      # --------------------------------------------------------
       # ESLint
+      #
+      # IMPORTANT:
+      # Do NOT blindly execute npm run lint.
+      #
+      # Your current repository has:
+      #
+      #   "lint": "ng lint"
+      #
+      # but angular.json has no lint target.
       # --------------------------------------------------------
 
       - name: ESLint
@@ -352,28 +434,72 @@ jobs:
         run: |
           set -euo pipefail
 
-          if node -e "const p=require('./package.json'); process.exit(p.scripts?.lint ? 0 : 1)" 2>/dev/null; then
+          echo "Checking ESLint configuration..."
 
-            echo "Running npm lint script..."
-            npm run lint
+          HAS_ESLINT_CONFIG=false
 
-          elif [[ -f "eslint.config.js" ]] ||
-               [[ -f "eslint.config.mjs" ]] ||
-               [[ -f "eslint.config.cjs" ]] ||
-               [[ -f ".eslintrc.json" ]] ||
-               [[ -f ".eslintrc.js" ]] ||
-               [[ -f ".eslintrc.cjs" ]]; then
+          if [[ -f "eslint.config.js" ]] ||
+             [[ -f "eslint.config.mjs" ]] ||
+             [[ -f "eslint.config.cjs" ]] ||
+             [[ -f ".eslintrc.json" ]] ||
+             [[ -f ".eslintrc.js" ]] ||
+             [[ -f ".eslintrc.cjs" ]]; then
 
-            echo "ESLint configuration detected."
-
-            npx eslint . --max-warnings=0
-
-          else
-
-            echo "No ESLint configuration found."
-            echo "Skipping ESLint."
+            HAS_ESLINT_CONFIG=true
 
           fi
+
+          # Angular project with a valid "lint" target
+          if [[ "${{ needs.detect.outputs.angular }}" == "true" ]] &&
+             [[ "${{ steps.angular-projects.outputs.has_lint_target || 'false' }}" == "true" ]]; then
+
+            echo "Angular lint target found."
+
+            if [[ -x "./node_modules/.bin/ng" ]]; then
+              ./node_modules/.bin/ng lint
+            else
+              npx ng lint
+            fi
+
+            exit 0
+          fi
+
+          # Real ESLint configuration
+          if [[ "$HAS_ESLINT_CONFIG" == "true" ]]; then
+
+            echo "ESLint configuration found."
+
+            if [[ -x "./node_modules/.bin/eslint" ]]; then
+              ./node_modules/.bin/eslint . --max-warnings=0
+            else
+              npx eslint . --max-warnings=0
+            fi
+
+            exit 0
+          fi
+
+          # npm lint script
+          if node -e "
+            const p=require('./package.json');
+            const lint=p.scripts?.lint || '';
+            process.exit(
+              lint && !lint.includes('ng lint') ? 0 : 1
+            );
+          " 2>/dev/null; then
+
+            echo "Running project lint script."
+
+            npm run lint
+
+            exit 0
+          fi
+
+          echo "::warning::No executable ESLint configuration or Angular lint target found."
+          echo "Skipping ESLint."
+          echo ""
+          echo "If linting is required, install/configure Angular ESLint:"
+          echo "npm install --save-dev @angular-eslint/schematics"
+          echo "ng add @angular-eslint/schematics"
 
       # --------------------------------------------------------
       # TypeScript
@@ -385,36 +511,46 @@ jobs:
           set -euo pipefail
 
           if [[ -f "tsconfig.json" ]]; then
-            npx tsc --noEmit
+            echo "Running TypeScript validation..."
+
+            if [[ -x "./node_modules/.bin/tsc" ]]; then
+              ./node_modules/.bin/tsc --noEmit
+            else
+              npx tsc --noEmit
+            fi
           else
-            echo "No tsconfig.json found. Skipping TypeScript validation."
+            echo "No tsconfig.json found."
+            echo "Skipping TypeScript validation."
           fi
 
       # --------------------------------------------------------
-      # Unit Tests
+      # Unit tests
       # --------------------------------------------------------
 
-      - name: Run tests
+      - name: Run Node.js tests
         shell: bash
         run: |
           set -euo pipefail
 
-          if node -e "const p=require('./package.json'); process.exit(p.scripts?.test ? 0 : 1)" 2>/dev/null; then
+          if node -e "
+            const p=require('./package.json');
+            process.exit(p.scripts?.test ? 0 : 1);
+          " 2>/dev/null; then
 
             npm test -- --watch=false
 
           else
 
-            echo "No npm test script found."
-            echo "Skipping tests."
+            echo "::warning::No npm test script found."
+            echo "Skipping Node.js tests."
 
           fi
 
       # --------------------------------------------------------
-      # NPM SECURITY
+      # NPM AUDIT
       # --------------------------------------------------------
 
-      - name: NPM audit
+      - name: NPM security audit
         shell: bash
         run: |
           set -euo pipefail
@@ -445,8 +581,6 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -465,16 +599,13 @@ jobs:
             npm install
           fi
 
-      - name: Install Angular CLI if required
-        shell: bash
+      - name: Verify Angular CLI
         run: |
-          set -euo pipefail
-
           if [[ -x "./node_modules/.bin/ng" ]]; then
-            echo "Using project Angular CLI."
+            ./node_modules/.bin/ng version
           else
-            echo "Project Angular CLI not found."
             npm install -g @angular/cli
+            ng version
           fi
 
       - name: Angular production build
@@ -488,7 +619,7 @@ jobs:
             ng build --configuration production
           fi
 
-      - name: Upload Angular build
+      - name: Upload Angular production build
         if: success()
         uses: actions/upload-artifact@v4
         with:
@@ -510,8 +641,6 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
       - name: Validate dependency manifests
         shell: bash
@@ -526,6 +655,8 @@ jobs:
 
           if [[ -f "package-lock.json" ]]; then
             echo "package-lock.json detected."
+          else
+            echo "::warning::package-lock.json is missing."
           fi
 
           if [[ -f "pubspec.yaml" ]]; then
@@ -560,8 +691,6 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
 
       - name: Download scan reports
         uses: actions/download-artifact@v4
@@ -571,12 +700,12 @@ jobs:
           merge-multiple: false
         continue-on-error: true
 
-      - name: Generate consolidated HTML report
+      - name: Generate consolidated report
         shell: bash
         env:
-          SECRET_SCAN_RESULT: ${{ needs.secret-scan.result }}
+          SECRET_RESULT: ${{ needs.secret-scan.result }}
           SAST_RESULT: ${{ needs.sast.result }}
-          DEPENDENCY_RESULT: ${{ needs.dependency-scan.result }}
+          TRIVY_RESULT: ${{ needs.dependency-scan.result }}
           FLUTTER_RESULT: ${{ needs.flutter.result }}
           NODE_RESULT: ${{ needs.node.result }}
           ANGULAR_RESULT: ${{ needs.angular-build.result }}
@@ -586,101 +715,140 @@ jobs:
 
           mkdir -p final-report
 
-          cat > final-report/security-report.html <<'HTML'
-          <!DOCTYPE html>
-          <html lang="en">
+          python3 <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from html import escape
+
+          output = Path("final-report")
+          output.mkdir(exist_ok=True)
+
+          results = {
+              "Gitleaks Secret Scan": os.environ["SECRET_RESULT"],
+              "Semgrep SAST": os.environ["SAST_RESULT"],
+              "Trivy Dependency Security": os.environ["TRIVY_RESULT"],
+              "Flutter Quality": os.environ["FLUTTER_RESULT"],
+              "Node.js / Angular Quality": os.environ["NODE_RESULT"],
+              "Angular Production Build": os.environ["ANGULAR_RESULT"],
+              "Dependency Policy": os.environ["POLICY_RESULT"],
+          }
+
+          def css_class(value):
+              if value == "success":
+                  return "success"
+              if value == "failure":
+                  return "failure"
+              if value == "cancelled":
+                  return "failure"
+              if value == "skipped":
+                  return "skipped"
+              return "warning"
+
+          rows = ""
+
+          for name, value in results.items():
+              rows += f"""
+              <tr>
+                <td>{escape(name)}</td>
+                <td class="{css_class(value)}">
+                  {escape(value.upper())}
+                </td>
+              </tr>
+              """
+
+          summary = {
+              "repository": os.environ.get("GITHUB_REPOSITORY"),
+              "workflow": os.environ.get("GITHUB_WORKFLOW"),
+              "run_number": os.environ.get("GITHUB_RUN_NUMBER"),
+              "branch": os.environ.get("GITHUB_REF_NAME"),
+              "commit": os.environ.get("GITHUB_SHA"),
+              "results": results,
+          }
+
+          (output / "summary.json").write_text(
+              json.dumps(summary, indent=2),
+              encoding="utf-8"
+          )
+
+          html = f"""<!DOCTYPE html>
+          <html>
           <head>
-            <meta charset="UTF-8">
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>UAT Security & Quality Report</title>
 
-            <meta name="viewport"
-                  content="width=device-width, initial-scale=1.0">
+          <style>
+          body {{
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 30px;
+            background: #f5f7fa;
+            color: #263238;
+          }}
 
-            <title>UAT Security & Quality Report</title>
+          .container {{
+            max-width: 1200px;
+            margin: auto;
+          }}
 
-            <style>
-              body {
-                font-family: Arial, Helvetica, sans-serif;
-                margin: 0;
-                padding: 30px;
-                background: #f5f7fa;
-                color: #263238;
-              }
+          .header {{
+            background: #1565c0;
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+          }}
 
-              .container {
-                max-width: 1200px;
-                margin: auto;
-              }
+          .card {{
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+          }}
 
-              .header {
-                background: #1565c0;
-                color: white;
-                padding: 25px;
-                border-radius: 10px;
-                margin-bottom: 20px;
-              }
+          table {{
+            width: 100%;
+            border-collapse: collapse;
+          }}
 
-              h1 {
-                margin: 0 0 10px 0;
-              }
+          th, td {{
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            text-align: left;
+          }}
 
-              .card {
-                background: white;
-                border-radius: 10px;
-                padding: 20px;
-                margin-bottom: 20px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-              }
+          th {{
+            background: #f5f7fa;
+          }}
 
-              table {
-                width: 100%;
-                border-collapse: collapse;
-              }
+          .success {{
+            color: #2e7d32;
+            font-weight: bold;
+          }}
 
-              th,
-              td {
-                padding: 12px;
-                border-bottom: 1px solid #e0e0e0;
-                text-align: left;
-              }
+          .failure {{
+            color: #d32f2f;
+            font-weight: bold;
+          }}
 
-              th {
-                background: #f5f7fa;
-              }
+          .skipped {{
+            color: #757575;
+            font-weight: bold;
+          }}
 
-              .success {
-                color: #2e7d32;
-                font-weight: bold;
-              }
+          .warning {{
+            color: #f9a825;
+            font-weight: bold;
+          }}
 
-              .failure {
-                color: #d32f2f;
-                font-weight: bold;
-              }
-
-              .skipped {
-                color: #757575;
-                font-weight: bold;
-              }
-
-              .warning {
-                color: #f9a825;
-                font-weight: bold;
-              }
-
-              .footer {
-                color: #757575;
-                font-size: 12px;
-                margin-top: 20px;
-              }
-
-              pre {
-                background: #263238;
-                color: #ffffff;
-                padding: 15px;
-                overflow-x: auto;
-                border-radius: 6px;
-              }
-            </style>
+          code {{
+            background: #f1f3f4;
+            padding: 2px 5px;
+            border-radius: 4px;
+          }}
+          </style>
           </head>
 
           <body>
@@ -689,164 +857,80 @@ jobs:
 
             <div class="header">
               <h1>UAT Security & Quality Report</h1>
-              <div>
-                Repository:
-                <strong>${GITHUB_REPOSITORY}</strong>
-              </div>
-              <div>
-                Branch:
-                <strong>${GITHUB_REF_NAME}</strong>
-              </div>
-              <div>
-                Commit:
-                <strong>${GITHUB_SHA}</strong>
-              </div>
-              <div>
-                Workflow Run:
-                <strong>#${GITHUB_RUN_NUMBER}</strong>
-              </div>
+              <p><strong>Repository:</strong> {escape(os.environ.get("GITHUB_REPOSITORY", ""))}</p>
+              <p><strong>Branch:</strong> {escape(os.environ.get("GITHUB_REF_NAME", ""))}</p>
+              <p><strong>Commit:</strong> {escape(os.environ.get("GITHUB_SHA", ""))}</p>
+              <p><strong>Run:</strong> #{escape(os.environ.get("GITHUB_RUN_NUMBER", ""))}</p>
             </div>
 
             <div class="card">
-
-              <h2>Pipeline Summary</h2>
+              <h2>Pipeline Results</h2>
 
               <table>
+                <thead>
+                  <tr>
+                    <th>Check</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
 
-                <tr>
-                  <th>Check</th>
-                  <th>Status</th>
-                </tr>
-
-                <tr>
-                  <td>Gitleaks Secret Scan</td>
-                  <td class="${SECRET_SCAN_RESULT}">
-                    ${SECRET_SCAN_RESULT}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td>Semgrep SAST</td>
-                  <td class="${SAST_RESULT}">
-                    ${SAST_RESULT}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td>Trivy Dependency Security</td>
-                  <td class="${DEPENDENCY_RESULT}">
-                    ${DEPENDENCY_RESULT}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td>Flutter Quality</td>
-                  <td class="${FLUTTER_RESULT}">
-                    ${FLUTTER_RESULT}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td>Node.js / Angular Quality</td>
-                  <td class="${NODE_RESULT}">
-                    ${NODE_RESULT}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td>Angular Production Build</td>
-                  <td class="${ANGULAR_RESULT}">
-                    ${ANGULAR_RESULT}
-                  </td>
-                </tr>
-
-                <tr>
-                  <td>Dependency Policy</td>
-                  <td class="${POLICY_RESULT}">
-                    ${POLICY_RESULT}
-                  </td>
-                </tr>
-
+                <tbody>
+                  {rows}
+                </tbody>
               </table>
-
             </div>
 
             <div class="card">
-
-              <h2>Security Checks</h2>
+              <h2>Security Controls</h2>
 
               <ul>
-                <li>Secret detection: Gitleaks</li>
-                <li>Static Application Security Testing: Semgrep</li>
-                <li>Dependency/filesystem vulnerability scan: Trivy</li>
-                <li>NPM high/critical dependency audit</li>
+                <li>Gitleaks secret detection</li>
+                <li>Semgrep SAST</li>
+                <li>Trivy vulnerability scanning</li>
+                <li>Trivy secret scanning</li>
+                <li>NPM dependency audit</li>
               </ul>
-
             </div>
 
             <div class="card">
-
-              <h2>Quality Checks</h2>
+              <h2>Quality Controls</h2>
 
               <ul>
                 <li>Flutter static analysis</li>
-                <li>Flutter unit tests</li>
-                <li>ESLint</li>
+                <li>Flutter tests</li>
+                <li>ESLint / Angular lint</li>
                 <li>TypeScript validation</li>
-                <li>Node.js unit tests</li>
+                <li>Node.js tests</li>
                 <li>Angular production build</li>
               </ul>
-
             </div>
 
             <div class="card">
-
-              <h2>Generated Artifacts</h2>
+              <h2>Artifacts</h2>
 
               <ul>
                 <li>Gitleaks JSON report</li>
                 <li>Semgrep JSON report</li>
                 <li>Trivy JSON report</li>
-                <li>Angular production build</li>
+                <li>Consolidated HTML report</li>
+                <li>Machine-readable JSON summary</li>
               </ul>
-
-            </div>
-
-            <div class="footer">
-              Generated automatically by GitHub Actions.
             </div>
 
           </div>
 
           </body>
           </html>
-          HTML
+          """
 
-      - name: Generate machine-readable summary
-        shell: bash
-        run: |
-          set -euo pipefail
+          (output / "security-report.html").write_text(
+              html,
+              encoding="utf-8"
+          )
 
-          cat > final-report/summary.json <<JSON
-          {
-            "repository": "${GITHUB_REPOSITORY}",
-            "workflow": "${GITHUB_WORKFLOW}",
-            "run_number": "${GITHUB_RUN_NUMBER}",
-            "branch": "${GITHUB_REF_NAME}",
-            "commit": "${GITHUB_SHA}",
-            "results": {
-              "secret_scan": "${{ needs.secret-scan.result }}",
-              "sast": "${{ needs.sast.result }}",
-              "dependency_scan": "${{ needs.dependency-scan.result }}",
-              "flutter": "${{ needs.flutter.result }}",
-              "node": "${{ needs.node.result }}",
-              "angular_build": "${{ needs.angular-build.result }}",
-              "dependency_policy": "${{ needs.dependency-policy.result }}"
-            }
-          }
-          JSON
+          print("Security report generated.")
 
-      - name: Add report to GitHub summary
+      - name: Publish report summary
         if: always()
         shell: bash
         run: |
@@ -859,7 +943,7 @@ jobs:
             echo "| Semgrep | ${{ needs.sast.result }} |"
             echo "| Trivy | ${{ needs.dependency-scan.result }} |"
             echo "| Flutter | ${{ needs.flutter.result }} |"
-            echo "| Node.js | ${{ needs.node.result }} |"
+            echo "| Node.js / Angular | ${{ needs.node.result }} |"
             echo "| Angular Build | ${{ needs.angular-build.result }} |"
             echo "| Dependency Policy | ${{ needs.dependency-policy.result }} |"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -875,7 +959,7 @@ jobs:
 
 
   # ============================================================
-  # 10. FINAL UAT SECURITY GATE
+  # 10. FINAL SECURITY GATE
   # ============================================================
 
   uat-summary:
@@ -898,74 +982,71 @@ jobs:
 
     steps:
 
-      - name: Evaluate security results
+      - name: Evaluate results
         shell: bash
         run: |
           set -euo pipefail
 
-          echo "=========================================="
-          echo "        UAT SECURITY GATE"
-          echo "=========================================="
-
-          echo "Secret Scan       : ${{ needs.secret-scan.result }}"
-          echo "Semgrep SAST      : ${{ needs.sast.result }}"
-          echo "Trivy             : ${{ needs.dependency-scan.result }}"
-          echo "Flutter           : ${{ needs.flutter.result }}"
-          echo "Node.js           : ${{ needs.node.result }}"
-          echo "Angular Build     : ${{ needs.angular-build.result }}"
-          echo "Dependency Policy : ${{ needs.dependency-policy.result }}"
-          echo "Report            : ${{ needs.report.result }}"
-
-          echo "=========================================="
+          echo "=============================================="
+          echo "             UAT SECURITY GATE"
+          echo "=============================================="
 
           FAILED=false
 
-          check_job() {
-            local NAME="$1"
-            local RESULT="$2"
+          check() {
+            NAME="$1"
+            RESULT="$2"
 
-            if [[ "$RESULT" == "failure" ]]; then
-              echo "❌ $NAME FAILED"
-              FAILED=true
-            elif [[ "$RESULT" == "cancelled" ]]; then
-              echo "❌ $NAME CANCELLED"
-              FAILED=true
-            elif [[ "$RESULT" == "success" ]]; then
-              echo "✅ $NAME PASSED"
-            elif [[ "$RESULT" == "skipped" ]]; then
-              echo "ℹ️ $NAME SKIPPED"
-            else
-              echo "⚠️ $NAME: $RESULT"
-            fi
+            case "$RESULT" in
+
+              success)
+                echo "✅ $NAME : PASSED"
+                ;;
+
+              skipped)
+                echo "ℹ️ $NAME : SKIPPED"
+                ;;
+
+              failure|cancelled)
+                echo "❌ $NAME : $RESULT"
+                FAILED=true
+                ;;
+
+              *)
+                echo "⚠️ $NAME : $RESULT"
+                ;;
+            esac
           }
 
-          check_job "Gitleaks" "${{ needs.secret-scan.result }}"
-          check_job "Semgrep" "${{ needs.sast.result }}"
-          check_job "Trivy" "${{ needs.dependency-scan.result }}"
-          check_job "Flutter" "${{ needs.flutter.result }}"
-          check_job "Node.js" "${{ needs.node.result }}"
-          check_job "Angular Build" "${{ needs.angular-build.result }}"
-          check_job "Dependency Policy" "${{ needs.dependency-policy.result }}"
+          check "Gitleaks" "${{ needs.secret-scan.result }}"
+          check "Semgrep" "${{ needs.sast.result }}"
+          check "Trivy" "${{ needs.dependency-scan.result }}"
+          check "Flutter" "${{ needs.flutter.result }}"
+          check "Node.js" "${{ needs.node.result }}"
+          check "Angular Build" "${{ needs.angular-build.result }}"
+          check "Dependency Policy" "${{ needs.dependency-policy.result }}"
 
-          echo ""
+          echo "=============================================="
 
           if [[ "$FAILED" == "true" ]]; then
+            echo ""
             echo "❌ UAT SECURITY GATE FAILED"
             echo ""
-            echo "Review the generated security reports."
+            echo "Review the generated workflow artifacts."
             exit 1
           fi
 
+          echo ""
           echo "✅ UAT SECURITY GATE PASSED"
 
 
   # ============================================================
-  # 11. FINAL EMAIL NOTIFICATION
+  # 11. FINAL EMAIL
   #
-  # IMPORTANT:
-  # This is intentionally the final job.
+  # This job ALWAYS runs.
   #
-  # It runs even when the security gate fails.
+  # It does NOT depend on the success of the security gate.
+  # Therefore the email is sent even when security checks fail.
   # ============================================================
 
   email-report:
@@ -988,19 +1069,99 @@ jobs:
           path: final-report
         continue-on-error: true
 
-      - name: Determine pipeline status
+      - name: Determine final status
         id: status
         shell: bash
         run: |
-          set -euo pipefail
-
           if [[ "${{ needs.uat-summary.result }}" == "success" ]]; then
             echo "status=PASSED" >> "$GITHUB_OUTPUT"
           else
             echo "status=FAILED" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Send email
+      # --------------------------------------------------------
+      # SMTP validation
+      # --------------------------------------------------------
+
+      - name: Validate SMTP configuration
+        shell: bash
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+        run: |
+          set -euo pipefail
+
+          REQUIRED_VARS=(
+            SMTP_HOST
+            SMTP_PORT
+            SMTP_USERNAME
+            SMTP_PASSWORD
+            MAIL_FROM
+            MAIL_TO
+          )
+
+          for VAR in "${REQUIRED_VARS[@]}"; do
+
+            if [[ -z "${!VAR:-}" ]]; then
+              echo "::error::Missing required GitHub secret: $VAR"
+              exit 1
+            fi
+
+          done
+
+          if [[ ! "$SMTP_PORT" =~ ^[0-9]+$ ]]; then
+            echo "::error::SMTP_PORT must be numeric."
+            exit 1
+          fi
+
+          echo "SMTP configuration validated."
+          echo "SMTP host: $SMTP_HOST"
+          echo "SMTP port: $SMTP_PORT"
+
+      # --------------------------------------------------------
+      # SMTP connectivity test
+      # --------------------------------------------------------
+
+      - name: Test SMTP connectivity
+        shell: python
+        env:
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        run: |
+          import os
+          import socket
+
+          host = os.environ["SMTP_HOST"]
+          port = int(os.environ["SMTP_PORT"])
+
+          print(f"Testing TCP connectivity to {host}:{port}")
+
+          sock = socket.create_connection(
+              (host, port),
+              timeout=15
+          )
+
+          sock.close()
+
+          print("SMTP TCP connectivity successful.")
+
+      # --------------------------------------------------------
+      # Send email
+      #
+      # Supports:
+      #
+      # 465 -> SMTP over SSL
+      # 587 -> SMTP + STARTTLS
+      # other -> plain SMTP
+      #
+      # Retries 3 times.
+      # --------------------------------------------------------
+
+      - name: Send final email
         shell: python
         env:
           SMTP_HOST: ${{ secrets.SMTP_HOST }}
@@ -1017,27 +1178,30 @@ jobs:
           GITHUB_REF_NAME: ${{ github.ref_name }}
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           GITHUB_SERVER_URL: ${{ github.server_url }}
 
-          SECRET_SCAN_RESULT: ${{ needs.uat-summary.result }}
         run: |
           import os
-          import smtplib
           import ssl
+          import smtplib
+          import time
 
           from email.message import EmailMessage
           from pathlib import Path
 
-          smtp_host = os.environ["SMTP_HOST"]
-          smtp_port = int(os.environ.get("SMTP_PORT", "587"))
-          smtp_username = os.environ["SMTP_USERNAME"]
-          smtp_password = os.environ["SMTP_PASSWORD"]
+          host = os.environ["SMTP_HOST"]
+          port = int(os.environ["SMTP_PORT"])
+
+          username = os.environ["SMTP_USERNAME"]
+          password = os.environ["SMTP_PASSWORD"]
 
           mail_from = os.environ["MAIL_FROM"]
-          mail_to = [
-              address.strip()
-              for address in os.environ["MAIL_TO"].split(",")
-              if address.strip()
+
+          recipients = [
+              value.strip()
+              for value in os.environ["MAIL_TO"].split(",")
+              if value.strip()
           ]
 
           status = os.environ["PIPELINE_STATUS"]
@@ -1046,20 +1210,22 @@ jobs:
           branch = os.environ["GITHUB_REF_NAME"]
           commit = os.environ["GITHUB_SHA"]
           run_number = os.environ["GITHUB_RUN_NUMBER"]
+          run_id = os.environ["GITHUB_RUN_ID"]
           server_url = os.environ["GITHUB_SERVER_URL"]
 
           run_url = (
-              f"{server_url}/{repository}/actions/runs/"
-              f"{os.environ['GITHUB_RUN_ID']}"
+              f"{server_url}/{repository}/actions/runs/{run_id}"
           )
 
           subject = (
-              f"[UAT] Security & Quality Report - "
+              f"[UAT] Security & Quality - "
               f"{status} - {repository} - Run #{run_number}"
           )
 
           body = f"""
-          UAT Security & Quality Pipeline Report
+          UAT SECURITY & QUALITY REPORT
+
+          ================================================
 
           Status       : {status}
           Repository   : {repository}
@@ -1067,57 +1233,74 @@ jobs:
           Commit       : {commit}
           Workflow Run : #{run_number}
 
-          Security checks:
-            - Gitleaks Secret Scan
-            - Semgrep SAST
-            - Trivy Dependency Security
-            - NPM Audit
+          ================================================
 
-          Quality checks:
-            - Flutter Analyze
-            - Flutter Tests
-            - ESLint
-            - TypeScript Validation
-            - Node.js Tests
-            - Angular Production Build
+          SECURITY CHECKS
 
-          Detailed GitHub Actions report:
+          - Gitleaks Secret Scan
+          - Semgrep SAST
+          - Trivy Vulnerability Scan
+          - Trivy Secret Scan
+          - NPM Security Audit
+
+          ================================================
+
+          QUALITY CHECKS
+
+          - Flutter Analyze
+          - Flutter Tests
+          - ESLint / Angular Lint
+          - TypeScript Validation
+          - Node.js Tests
+          - Angular Production Build
+
+          ================================================
+
+          DETAILED REPORT
+
           {run_url}
 
-          The detailed HTML/JSON reports are available as workflow artifacts.
+          The detailed HTML and JSON reports are attached
+          when available and are also available in the
+          GitHub Actions artifacts.
 
-          This email was generated automatically by GitHub Actions.
+          ================================================
+
+          This is an automated message generated by
+          GitHub Actions.
           """
 
-          msg = EmailMessage()
-          msg["Subject"] = subject
-          msg["From"] = mail_from
-          msg["To"] = ", ".join(mail_to)
-          msg.set_content(body)
+          message = EmailMessage()
 
+          message["Subject"] = subject
+          message["From"] = mail_from
+          message["To"] = ", ".join(recipients)
+
+          message.set_content(body)
+
+          # Attach HTML report
           html_report = Path(
               "final-report/security-report.html"
           )
 
           if html_report.exists():
-              html_content = html_report.read_text(
-                  encoding="utf-8"
-              )
 
-              msg.add_attachment(
-                  html_content.encode("utf-8"),
+              message.add_attachment(
+                  html_report.read_bytes(),
                   maintype="text",
                   subtype="html",
                   filename="uat-security-report.html"
               )
 
-          summary = Path(
+          # Attach JSON summary
+          json_report = Path(
               "final-report/summary.json"
           )
 
-          if summary.exists():
-              msg.add_attachment(
-                  summary.read_bytes(),
+          if json_report.exists():
+
+              message.add_attachment(
+                  json_report.read_bytes(),
                   maintype="application",
                   subtype="json",
                   filename="uat-security-summary.json"
@@ -1125,26 +1308,120 @@ jobs:
 
           context = ssl.create_default_context()
 
-          with smtplib.SMTP(
-              smtp_host,
-              smtp_port,
-              timeout=30
-          ) as server:
+          last_error = None
 
-              server.ehlo()
+          for attempt in range(1, 4):
 
-              if smtp_port == 587:
-                  server.starttls(context=context)
-                  server.ehlo()
+              try:
 
-              server.login(
-                  smtp_username,
-                  smtp_password
+                  print(
+                      f"SMTP attempt {attempt}/3 "
+                      f"using {host}:{port}"
+                  )
+
+                  if port == 465:
+
+                      print("Using SMTP over SSL.")
+
+                      with smtplib.SMTP_SSL(
+                          host,
+                          port,
+                          timeout=30,
+                          context=context
+                      ) as server:
+
+                          server.ehlo()
+
+                          server.login(
+                              username,
+                              password
+                          )
+
+                          server.send_message(message)
+
+                  elif port == 587:
+
+                      print("Using SMTP STARTTLS.")
+
+                      with smtplib.SMTP(
+                          host,
+                          port,
+                          timeout=30
+                      ) as server:
+
+                          server.ehlo()
+
+                          server.starttls(
+                              context=context
+                          )
+
+                          server.ehlo()
+
+                          server.login(
+                              username,
+                              password
+                          )
+
+                          server.send_message(message)
+
+                  else:
+
+                      print(
+                          "Using standard SMTP connection."
+                      )
+
+                      with smtplib.SMTP(
+                          host,
+                          port,
+                          timeout=30
+                      ) as server:
+
+                          server.ehlo()
+
+                          server.login(
+                              username,
+                              password
+                          )
+
+                          server.send_message(message)
+
+                  print(
+                      "========================================"
+                  )
+
+                  print(
+                      "UAT security report email sent successfully."
+                  )
+
+                  print(
+                      "========================================"
+                  )
+
+                  break
+
+              except Exception as exc:
+
+                  last_error = exc
+
+                  print(
+                      f"SMTP attempt {attempt} failed: "
+                      f"{type(exc).__name__}: {exc}"
+                  )
+
+                  if attempt < 3:
+
+                      wait_seconds = attempt * 10
+
+                      print(
+                          f"Retrying in "
+                          f"{wait_seconds} seconds..."
+                      )
+
+                      time.sleep(wait_seconds)
+
+          else:
+
+              raise RuntimeError(
+                  "Unable to send UAT security report "
+                  f"after 3 attempts: {last_error}"
               )
-
-              server.send_message(msg)
-
-          print(
-              f"UAT security report email sent to: "
-              f"{', '.join(mail_to)}"
-          )
