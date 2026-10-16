@@ -3,7 +3,7 @@ name: AI Security Check for Pull Requests
 on:
   pull_request:
     branches:
-      - uat
+      - main
 
 jobs:
   ai_security_check_for_pull_requests:
